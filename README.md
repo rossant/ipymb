@@ -72,3 +72,30 @@ To use the Atlas format, put this in your config file:
 ```python
 c.NotebookApp.contents_manager_class = 'ipymd.AtlasContentsManager'
 ```
+
+## Using Docker
+
+You can also run this using Docker on a Mac (via boot2docker) or Linux by building the image and then running the app in the container.  
+
+* Building the image
+
+```
+docker build -t <your-user-name>/ipymd .
+```
+
+* Running the app in the container
+
+```
+$ cd your/notebook/directory
+$ docker run -it -p 8888:8888 -v $(pwd):/usr/data <user>/ipymd
+```
+
+The `-v` option will map your current local directory on your host to the `/usr/data` directory on the container.  Note that this volume mapping is currently not supported on Windows, although I'd expect that this will change soon.
+
+Then, open your browser:
+
+* On a Mac, go to `192.168.59.103:8888`
+* On Ubuntu, go to `127.0.0.1:8888`
+
+
+  
