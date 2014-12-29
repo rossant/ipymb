@@ -14,7 +14,7 @@ RUN git submodule update
 RUN python3 setup.py install
 
 
-# Install ipymd on the imaage and add it to PYTHONPATH
+# Install ipymd on the image and add it to PYTHONPATH
 RUN mkdir -p /usr/src
 ADD . /usr/src
 ENV PYTHONPATH /usr/src
