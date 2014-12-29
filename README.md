@@ -80,14 +80,16 @@ You can also run this using Docker on a Mac (via boot2docker) or Linux by buildi
 * Building the image
 
 ```
-docker build -t <your-user-name>/ipymd .
+docker build -t odewahn/ipymd .
 ```
+
+Be sure to change then username `odewahn` to your username.
 
 * Running the app in the container
 
 ```
 $ cd your/notebook/directory
-$ docker run -it -p 8888:8888 -v $(pwd):/usr/data <user>/ipymd
+$ docker run -it -p 8888:8888 -v $(pwd):/usr/data odewahn/ipymd
 ```
 
 The `-v` option will map your current local directory on your host to the `/usr/data` directory on the container.  Note that this volume mapping is currently not supported on Windows, although I'd expect that this will change soon.
