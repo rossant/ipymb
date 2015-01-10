@@ -91,3 +91,28 @@ To use the Atlas format, put this in your config file:
 ```python
 c.NotebookApp.contents_manager_class = 'ipymd.AtlasContentsManager'
 ```
+
+## Using Docker
+
+You can also run this using Docker on a Mac (via boot2docker) or Linux.  (NB: you need docker and boot2docker 1.3+.  Also, it's set up by default using the AtlasContentsManager.) 
+
+Run this command within the directory containing the notebooks you want to edit.  (Note that docker will pull down the entire image the first time you run this command, so it may take a while.):
+
+```
+docker run -it -p 8888:8888 -v $(pwd):/usr/data odewahn/ipymd
+```
+
+Once the container starts, open your browser:
+
+* On a Mac, go to `192.168.59.103:8888`
+* On Ubuntu, go to `127.0.0.1:8888`
+
+The `-v` option will map your current local directory on your host to the `/usr/data` directory on the container.  Note that this volume mapping is currently not supported on Windows, although I hope Windows will be supported soon.
+
+### Building the image yourself
+
+If you want to hack on this project with Docker, you can build your own image like this:
+
+```
+docker build -t odewahn/ipymd .
+```
