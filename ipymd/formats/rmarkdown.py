@@ -12,7 +12,6 @@
 import re
 import os.path
 
-import yaml
 import base64
 
 try:
@@ -25,37 +24,42 @@ except ImportError:
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ..utils.utils import _read_text, _write_text, _get_cell_types
-from ..core.prompt import create_prompt
-from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, _read_rmd_b64, \
+from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, \
     _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, _get_nb_html_path
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
+from ipymd.core.format_manager import convert
 
-from ..core.meta import NotebookConsumer, NotebookProducer
-from .notebook import IpymdToNotebookWriter
 
 #------------------------------------------------------------------------------
 # R Markdown
 #------------------------------------------------------------------------------
 
 
-class RmarkdownReader(NotebookProducer):
-    """ read R notebook format (combine .Rmd and .nb.html) """
+class RmarkdownReader(object):
+    """ read R notebook format (combine .Rmd and .nb.html).
+    Output format is a jupyter nbformat object.
+
+    Unlike all other ipymd readers, this class uses the jupyter nbformat
+    as internal representation of the notebook. The jupyter format was chosen as internal format to enable
+    more complex outputs (i.e. multiple outputs per cell, including
+    multiple images)"""
+
     def __init__(self):
         self._rmd_reader = RmdReader()
         self._html_nb_reader = HtmlNbReader()
 
     def read(self, contents):
-        cells_rmd = list(self._rmd_reader.read(contents['rmd']))
-        nb_writer = IpymdToNotebookWriter()
-        for cell in cells_rmd:
-            nb_writer.write(cell)
-        nb_rmd = nb_writer.contents
+        cells_rmd = self._rmd_reader.read(contents['rmd'])
         nb_html = self._html_nb_reader.read(contents['html'])
+        # we need both inputs in jupyter nb format, so we can merge them.
+        nb_rmd = convert(cells_rmd, to='notebook')
 
         nb_rmd['cells'] = _merge_consecutive_markdown_cells(nb_rmd['cells'])
         nb_html['cells'] = _merge_consecutive_markdown_cells(nb_html['cells'])
 
-        return self._merge_notebooks(nb_rmd, nb_html)
+        nb_merged = self._merge_notebooks(nb_rmd, nb_html)
+        validate(nb_merged)
+        return nb_merged
 
     def _merge_notebooks(self, nb_rmd, nb_html):
         # if not consistent, discard output (do not consider html cells)
@@ -206,7 +210,7 @@ class HtmlNbReader(object):
         return cell.cell
 
 
-class RmarkdownWriter(NotebookConsumer):
+class RmarkdownWriter(object):
     """Write R notebook (combine .Rmd and .nb.html) """
 
     def __init__(self):

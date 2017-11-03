@@ -225,7 +225,7 @@ def _test_rmarkdown_reader(basename):
     """Check that reading Rmarkdown (.Rmd + .nb.html) results in the correct notebook (.ipynb). """
     contents = _read_test_file(basename, 'rmarkdown')
     expected = _read_test_file(basename, 'notebook')
-    converted = convert(contents, from_='rmarkdown')
+    converted = convert(contents, from_='rmarkdown', to='notebook')
     # TODO check metadata
     _assert_notebooks_equal(expected, converted, check_cell_metadata=False, check_notebook_metadata=False)
 
@@ -234,7 +234,7 @@ def _test_rmarkdown_writer(basename):
     """Check that writing a notebook (.ipynb) to Rmarkdown results in the correct .Rmd + .nb.html files"""
     contents = _read_test_file(basename, 'notebook')
     expected = _read_test_file(basename, 'rmarkdown')
-    converted = convert(contents, to_='rmarkdown')
+    converted = convert(contents, to_='rmarkdown', from_='notebook')
     assert converted['rmd'] == expected['rmd']
     assert converted['html'] == expected['html']
 
@@ -243,8 +243,8 @@ def _test_rmarkdown_rmarkdown(basename):
     """Check that the double conversion is the identity."""
 
     contents = _read_test_file(basename, 'rmarkdown')
-    notebook = convert(contents, from_='rmarkdown')
-    converted = convert(notebook, to='rmarkdown')
+    notebook = convert(contents, from_='rmarkdown', to='notebook')
+    converted = convert(notebook, from_='notebook', to='rmarkdown')
 
     assert converted['rmd'] == contents['rmd']
     assert converted['html'] == contents['html']

@@ -253,6 +253,18 @@ class FormatManager(LoggingConfigurable):
         if to_kwargs is None:
             to_kwargs = {}
 
+        if from_ == 'rmarkdown' or to == 'rmarkdown':
+            # TODO: HACK: do rmarkdown conversion in external function.
+            # As Rmarkdown uses jupyter nbformat as internal format instead of
+            # ipymd cells, the usual 'conversion' scheme does not work.
+            # atm, I cannot think of an elegant solution which does not require
+            # to change a good deal of the ipymd code.
+            #
+            # The jupyter format was chosen as internal format to enable
+            # more complex outputs (i.e. multiple outputs per cell, including
+            # multiple images).
+            return convert_rmarkdown(from_, to, contents)
+
         if reader is None:
             reader = (self.create_reader(from_, **from_kwargs)
                       if from_ is not None else None)
@@ -335,3 +347,18 @@ def format_manager():
 def convert(*args, **kwargs):
     """Alias for format_manager().convert()."""
     return format_manager().convert(*args, **kwargs)
+
+
+def convert_rmarkdown(from_, to, contents):
+    from ..formats.rmarkdown import RmarkdownReader, RmarkdownWriter
+    if to == 'rmarkdown' and from_ == 'notebook':
+        writer = RmarkdownWriter()
+        writer.write_contents(contents)
+        return writer.contents
+
+    elif to == 'notebook' and from_ == 'rmarkdown':
+        reader = RmarkdownReader()
+        return reader.read(contents)
+
+    else:
+        raise RuntimeError("Rmarkdown conversion is only possible between 'notebook' and 'rmarkdown' format. ")
