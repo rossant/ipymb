@@ -1,0 +1,28 @@
+---
+output: html_notebook
+title: Example 5
+---
+
+# Header
+
+A paragraph.
+
+test
+
+```{python}
+foo = 'bar'
+```
+
+Python code:
+
+```{python}
+print("Hello world!")
+```
+
+JavaScript code:
+
+```javascript
+console.log("Hello world!");
+```
+
+test
