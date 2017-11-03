@@ -13,6 +13,7 @@ import re
 import os.path
 
 import base64
+import json
 
 try:
     import nbformat as nbf
@@ -23,12 +24,15 @@ except ImportError:
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ..utils.utils import _read_text, _write_text, _get_cell_types
+from ..utils.utils import _read_text, _write_text, _get_cell_types, \
+    _ensure_string
 from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, \
     _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, \
     _get_nb_html_path
+from ..lib.notebook import _stream_output_to_result
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
 from ipymd.core.format_manager import convert
+from ..ext.six import StringIO
 
 
 # ------------------------------------------------------------------------------
@@ -223,6 +227,9 @@ class RmarkdownWriter(object):
 
     def write_contents(self, nb):
         """convert a jupyter notebook dict to rmarkdown"""
+        # Parsing the notebook using nbf will get rid of the
+        # multi line strings.
+        # nb = nbf.from_dict(nb)
         assert nb['nbformat'] >= 4
 
         self.write_notebook_metadata(nb['metadata'])
@@ -234,6 +241,7 @@ class RmarkdownWriter(object):
         self._nb_html_writer.write(cell)
 
     def write_notebook_metadata(self, metadata):
+        # metadata = json.loads(json.dumps(metadata))
         self._rmd_writer.write_notebook_metadata(metadata)
 
     def close(self):
@@ -250,37 +258,6 @@ class RmarkdownWriter(object):
         self.close()
 
 
-class NbHtmlWriter(object):
-    """ Write R notebook .nb.html """
-    def __init__(self, rmd_writer):
-        """
-
-        Parameters
-        ----------
-        rmd_writer: RmdWriter
-            a reference to the corresponding RmdWriter, as the rmd output
-            will also be encoded in the html output.
-        """
-        self._rmd_writer = rmd_writer
-
-    @property
-    def template(self):
-        """ Load the jinja2 template from the package resources. """
-        env = Environment(
-            loader=PackageLoader('ipymd', 'ressources'),
-            autoescape=select_autoescape(['html', 'xml'])
-        )
-        return env.get_template('r_notebook.template.html')
-
-    def write(self, cell):
-        pass
-
-    @property
-    def contents(self):
-        base64_rmd = base64.b64encode(self._rmd_writer.contents.encode())
-        return self.template.render(base64_rmd=base64_rmd)
-
-
 class RmdWriter(BaseMarkdownWriter):
     """Default .Rmd writer."""
 
@@ -288,6 +265,7 @@ class RmdWriter(BaseMarkdownWriter):
         super(RmdWriter, self).__init__()
 
     def append_code(self, input, output=None, metadata=None):
+        input = _ensure_string(input)
         code_block = '```{{{meta}}}\n{code}\n```'.format(
             meta=self._encode_metadata(metadata), code=input.rstrip())
         self._output.write(code_block)
@@ -317,9 +295,140 @@ class RmdWriter(BaseMarkdownWriter):
 
         return "".join(out)
 
+    def write(self, cell):
+        """Write a ipynb cell to markdown"""
+        metadata = cell.get('metadata', None)
+        if cell['cell_type'] == 'markdown':
+            self.append_markdown(cell['source'], metadata)
+        elif cell['cell_type'] == 'code':
+            # output is not handled by RmdReader
+            self.append_code(cell['source'], output=None, metadata=metadata)
+        self._new_paragraph()
+
     @property
     def contents(self):
         return self._output.getvalue().rstrip() + '\n'  # end of file \n
+
+
+class NbHtmlWriter(object):
+    """ Write R notebook .nb.html """
+    def __init__(self, rmd_writer):
+        """
+
+        Parameters
+        ----------
+        rmd_writer: RmdWriter
+            a reference to the corresponding RmdWriter, as the rmd output
+            will also be encoded in the html output.
+        """
+        self._rmd_writer = rmd_writer
+        self._output = StringIO()
+
+    @property
+    def template(self):
+        """ Load the jinja2 template from the package resources. """
+        env = Environment(
+            loader=PackageLoader('ipymd', 'ressources'),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
+        return env.get_template('r_notebook.template.html')
+
+    def append_markdown(self, markdown, metadata):
+        # TODO markdown to html, maybe check how it's done in Rmarkdown for full compatibility
+        self._output.write(self._create_tag('text', markdown, metadata))
+
+    def append_code(self, source, outputs, metadata):
+        child_tags = []
+        child_tags.append(
+            self._create_tag('source',
+                             tag_content=self._format_source(source, metadata),
+                             tag_meta={'data': source})
+        )
+        for output in outputs:
+            child_tags.extend(self._create_output_tag(output))
+
+        self._output.write(
+            self._create_tag('chunk', "\n".join(child_tags))
+        )
+
+    def _create_output_tag(self, output):
+        """yield tags such as <!--rnb-plot-begin"""
+        output = _stream_output_to_result(output)
+        assert output['output_type'] == 'execute_result'
+        # text first!
+        try:
+            text = output['data'].pop('text/plain')
+            yield self._create_tag('output',
+                                   self._format_text_output(text),
+                                   output['metadata'])
+        except KeyError:
+            pass
+
+        # then images...
+        for mime, data in output['data'].items():
+            if mime.startswith('image/'):
+                yield self._create_tag('plot',
+                                       self._format_image(mime, data),
+                                       output['metadata'])
+            else:
+                raise RuntimeError("Invalid output mime-type: {}".format(mime))
+
+    @staticmethod
+    def _format_source(source, metadata):
+        """Format contents of source tag. """
+        # TODO default lang?
+        lang = metadata.get('lang', 'raw')
+        return '<pre class="{lang}"><code>{source}/code></pre>'.format(
+            lang=lang, source=source
+        )
+
+    @staticmethod
+    def _format_image(mime, data):
+        return '<p><img src="data:{mime};base64,{data}" /></p>'.format(
+            mime=mime, data=data)
+
+    @staticmethod
+    def _format_text_output(text):
+        return "<pre><code>{}</code></pre>".format(text)
+
+    @staticmethod
+    def _create_tag(tag_name, tag_content, tag_meta=None):
+        """
+
+        Parameters
+        ----------
+        tag_name: str
+            e.g. text, chunk, ... like in <!-- rnb-text-begin -->
+        tag_meta: dict
+            meta-dictionary which can be added to the tag.
+            Will be base64 encoded. Example <!-- rnb-source-begin eyJkXR== -->
+        tag_content:
+            html content which will be enclosed in the `begin` and `end` tags.
+
+        Returns
+        -------
+        str
+            <!-- rnb-tag-begin>some contents<!--rnb-tag-end-->\n
+
+        """
+        meta_b64 = "" if tag_meta is None else base64.b64encode(
+            json.dumps(tag_meta).encode('utf-8'))
+        return "<!-- rnb-{tag}-begin {b64}-->\n" \
+               "{contents}\n" \
+               "<!-- rnb-{tag}-end -->\n".format(tag=tag_name, b64=meta_b64,
+                                               contents=tag_content)
+
+    def write(self, cell):
+        metadata = cell.get('metadata', None)
+        if cell['cell_type'] == 'markdown':
+            self.append_markdown(cell['source'], metadata)
+        elif cell['cell_type'] == 'code':
+            self.append_code(cell['source'], cell['outputs'], metadata)
+
+    @property
+    def contents(self):
+        base64_rmd = base64.b64encode(self._rmd_writer.contents.encode())
+        return self.template.render(base64_rmd=base64_rmd)
 
 
 def load_rmarkdown(path):

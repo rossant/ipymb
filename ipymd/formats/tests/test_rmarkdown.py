@@ -243,7 +243,7 @@ def _test_rmarkdown_writer(basename):
     in the correct .Rmd + .nb.html files"""
     contents = _read_test_file(basename, 'notebook')
     expected = _read_test_file(basename, 'rmarkdown')
-    converted = convert(contents, to_='rmarkdown', from_='notebook')
+    converted = convert(contents, to='rmarkdown', from_='notebook')
     assert converted['rmd'] == expected['rmd']
     assert converted['html'] == expected['html']
 
