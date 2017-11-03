@@ -77,6 +77,7 @@ setup(
             'ipymd=ipymd.core.scripts:main',
         ],
         'ipymd.format': [
+            'rmarkdown=ipymd.formats.rmarkdown:RMD_FORMAT',
             'markdown=ipymd.formats.markdown:MARKDOWN_FORMAT',
             'atlas=ipymd.formats.atlas:ATLAS_FORMAT',
             'notebook=ipymd.formats.notebook:NOTEBOOK_FORMAT',
@@ -84,7 +85,7 @@ setup(
             'python=ipymd.formats.python:PYTHON_FORMAT',
         ]
     },
-    install_requires=['pyyaml'],
+    install_requires=['pyyaml', 'jinja2'],
     extras_require={
         'odf': ['odfpy'],
     },

@@ -68,7 +68,7 @@ class BlockGrammar(object):
     newline = re.compile(r'^\n+')
     block_code = re.compile(r'^( {4}[^\n]+\n*)+')
     fences = re.compile(
-        r'^ *(`{3,}|~{3,}) *(\S+)? *\n'  # ```lang
+        r'^ *(`{3,}|~{3,}) *(\S+|\{.+\})? *\n'  # ```lang | ```{lang, option1=foo, option2='bar'}
         r'([\s\S]+?)\s*'
         r'\1 *(?:\n+|$)'  # ```
     )
@@ -654,7 +654,7 @@ def _filter_markdown(source, filters):
 
 
 class MarkdownFilter(object):
-    """Filter Marakdown contents by keeping a subset of the contents.
+    """Filter Markdown contents by keeping a subset of the contents.
 
     Parameters
     ----------

@@ -105,6 +105,10 @@ def _show_outputs(*outputs):
         pprint(output)
 
 
+def _get_cell_types(cells):
+    return [cell['cell_type'] for cell in cells]
+
+
 #------------------------------------------------------------------------------
 # Reading/writing files from/to disk
 #------------------------------------------------------------------------------
