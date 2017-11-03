@@ -13,7 +13,8 @@ except ImportError:
 
 Token = namedtuple("Token", ['kind', 'value'])
 
-# We will accept R and Python literals for boolean values in the markdown document
+# We will accept R and Python literals for boolean
+# values in the markdown document
 str_to_literal = {
     "NULL": None,
     "None": None,
@@ -97,7 +98,8 @@ def _parse_option_value(value):
                 return float(value)
             except ValueError:
                 # something else
-                raise TypeError("Unknown data type in chunk option: {}".format(value))
+                raise TypeError(
+                    "Unknown data type in chunk option: {}".format(value))
 
 
 def _option_value_str(value):
@@ -122,12 +124,14 @@ def _process_cell_metadata(kwargs):
 
 
 def _is_code_chunk(chunk_lang):
-    """determine from ```<chunk_lang>... if the chunk is executable code or documentation code (markdown) """
+    """determine from ```<chunk_lang>... if the chunk is executable code
+     or documentation code (markdown) """
     return chunk_lang.startswith('{') and chunk_lang.endswith('}')
 
 
 def _parse_chunk_meta(meta_string):
-    """Process a string in the form {r chunk_name, foo='bar', cat="gold", horse=9, bool_val=TRUE}"""
+    """Process a string in the form
+    {r chunk_name, foo='bar', cat="gold", horse=9, bool_val=TRUE}"""
     tokens = _tokenize_chunk_options(meta_string)
     args = []
     kwargs = []
@@ -165,7 +169,8 @@ def _merge_consecutive_markdown_cells(cells):
     tmp_cell = None
 
     def done_merging():
-        """execute, when switching back from a series of markdown cells to other cell types"""
+        """execute, when switching back from a series of markdown
+        cells to other cell types"""
         nonlocal merged, tmp_cell
         if tmp_cell is not None:
             merged.append(tmp_cell)
@@ -190,19 +195,22 @@ def _merge_consecutive_markdown_cells(cells):
 
 
 class HtmlNbChunkCell(object):
-    NO_CODE_FROM_HTMLNB = "Code is not parsed from .html.nb. Use code provided by *.Rmd instead. "
-    NO_META_FROM_HTMLNB = "Cell metadata is not parsed from .html.nb. Use metadata provided by *.Rmd instead. "
+    NO_CODE_FROM_HTMLNB = "Code is not parsed from .html.nb. " \
+                          "Use code provided by *.Rmd instead. "
+    NO_META_FROM_HTMLNB = "Cell metadata is not parsed from .html.nb. " \
+                          "Use metadata provided by *.Rmd instead. "
 
     def __init__(self, b64, execution_count):
         self._count = execution_count
-        fences = _read_rmd_b64(b64)['data'].strip()
+        # fences = _read_rmd_b64(b64)['data'].strip()
         self._cell = nbf.v4.new_code_cell(self.NO_CODE_FROM_HTMLNB,
                                           execution_count=self._count)
 
     def new_output(self, tag, b64):
         self._cell.outputs.append(
             nbf.v4.new_output('execute_result',
-                              {'text/plain': _read_rmd_b64(b64)['data'].strip()},
+                              {'text/plain':
+                                   _read_rmd_b64(b64)['data'].strip()},
                               execution_count=self._count,
                               metadata={"output_type": tag}))
 
@@ -217,6 +225,3 @@ class HtmlNbChunkCell(object):
     @property
     def cell(self):
         return self._cell
-
-
-

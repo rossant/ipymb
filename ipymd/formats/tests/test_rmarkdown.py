@@ -6,12 +6,11 @@
 # Imports
 # ------------------------------------------------------------------------------
 
-from ipymd.core.format_manager import format_manager, convert
-from ipymd.utils.utils import _diff, _show_outputs, _read_text, _ensure_string
-from ._utils import (_test_reader, _test_writer,
-                     _exec_test_file, _read_test_file, _test_file_path)
+from ipymd.core.format_manager import convert
+from ._utils import _read_test_file
 from ._notebook_utils import _assert_notebooks_equal
-from ipymd.formats.rmarkdown import *
+from ipymd.formats.rmarkdown import HtmlNbChunkCell, RmarkdownWriter, \
+    RmarkdownReader, RmdWriter, RmdReader, NbHtmlWriter, HtmlNbReader
 
 from collections import OrderedDict
 
@@ -26,23 +25,24 @@ def test_htmlnb_parse_html():
     text contents
     <!-- rnb-text-end -->
     <!-- rnb-chunk-begin -->
-    <!-- chunk contents --> 
+    <!-- chunk contents -->
     <!-- rnb-chunk-end -->
     """
     htmlnbreader = HtmlNbReader()
     result = list(htmlnbreader._parse_html(html))
-    assert result == [('text', 'text contents'), ('chunk', '<!-- chunk contents -->')]
+    assert result == [('text', 'text contents'),
+                      ('chunk', '<!-- chunk contents -->')]
 
 
 def test_htmlnb_parse_image():
     htmlnbreader = HtmlNbReader()
 
-    html = """
-    <p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAABAQEJCQ...==" /></p>
-    """
+    html = '<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhE' \
+           'UgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAABAQEJCQ...==" /></p>'
     mime, data = list(htmlnbreader._parse_image(html))
     assert mime == 'image/png'
-    assert data == "iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAABAQEJCQ...=="
+    assert data == "iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABDKYAcAAACT" \
+                   "FBMVEUAAAABAQEJCQ...=="
 
     html = """<p><a>some other html</a></p>"""
     mime, data = list(htmlnbreader._parse_image(html))
@@ -63,17 +63,18 @@ def test_htmlnb_chunk_cell():
 
     htmlnbreader = HtmlNbReader()
     assert htmlnbreader._chunk_cell(html) == {
-      "cell_type": "code",
-      "execution_count": 1,
-      "source": HtmlNbChunkCell.NO_CODE_FROM_HTMLNB,
-      "metadata": {},
-      "outputs": [{
-          # list of output dicts (described below)
-          "execution_count": 1,
-          "output_type": "execute_result",
-          "metadata": {},
-          "data": {'image/png': "iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAABAQEJCQ...=="}
-      }]
+        "cell_type": "code",
+        "execution_count": 1,
+        "source": HtmlNbChunkCell.NO_CODE_FROM_HTMLNB,
+        "metadata": {},
+        "outputs": [{
+            # list of output dicts (described below)
+            "execution_count": 1,
+            "output_type": "execute_result",
+            "metadata": {},
+            "data": {'image/png': "iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABD"
+                                  "KYAcAAACTFBMVEUAAAABAQEJCQ...=="}
+        }]
     }
 
 
@@ -180,7 +181,8 @@ def test_rmarkdown_merge_cells():
 
 
 def test_rmarkdown_merge_cells_inconsistent_input():
-    """test that source and output are not merged when the sources are inconsistent. """
+    """test that source and output are not merged when the sources
+    are inconsistent. """
     contents = {
         "rmd": """```{r}\nprint(1:10)\n```\n\n```{r}\nprint(1:10)\n```""",
         "html": """
@@ -197,7 +199,8 @@ def test_rmarkdown_merge_cells_inconsistent_input():
 
     reader = RmarkdownReader()
     nb = reader.read(contents)
-    assert nb['cells'][0]['source'] == nb['cells'][1]['source'] == 'print(1:10)'
+    assert (nb['cells'][0]['source'] == nb['cells'][1]['source']
+            == 'print(1:10)')
     assert nb['cells'][0]['outputs'] == nb['cells'][0]['outputs'] == []
 
 
@@ -214,24 +217,30 @@ def test_rmd_write_cell_metadata():
 
     rmdreader = RmdWriter()
     result = rmdreader._encode_metadata(chunk_meta)
-    expected = expected.replace("'", '"')  # we know that all strings will be double-quoted.
+    # we know that all strings will be double-quoted.
+    expected = expected.replace("'", '"')
     assert expected == result
+
 
 # ------------------------------------------------------------------------------
 # Test Format
 # ------------------------------------------------------------------------------
 
+
 def _test_rmarkdown_reader(basename):
-    """Check that reading Rmarkdown (.Rmd + .nb.html) results in the correct notebook (.ipynb). """
+    """Check that reading Rmarkdown (.Rmd + .nb.html) results
+    in the correct notebook (.ipynb). """
     contents = _read_test_file(basename, 'rmarkdown')
     expected = _read_test_file(basename, 'notebook')
     converted = convert(contents, from_='rmarkdown', to='notebook')
     # TODO check metadata
-    _assert_notebooks_equal(expected, converted, check_cell_metadata=False, check_notebook_metadata=False)
+    _assert_notebooks_equal(expected, converted, check_cell_metadata=False,
+                            check_notebook_metadata=False)
 
 
 def _test_rmarkdown_writer(basename):
-    """Check that writing a notebook (.ipynb) to Rmarkdown results in the correct .Rmd + .nb.html files"""
+    """Check that writing a notebook (.ipynb) to Rmarkdown results
+    in the correct .Rmd + .nb.html files"""
     contents = _read_test_file(basename, 'notebook')
     expected = _read_test_file(basename, 'rmarkdown')
     converted = convert(contents, to_='rmarkdown', from_='notebook')
@@ -272,7 +281,3 @@ def test_ex6_writer():
 
 def test_ex6_rmarkdown_rmarkdown():
     _test_rmarkdown_rmarkdown('ex6')
-
-
-
-

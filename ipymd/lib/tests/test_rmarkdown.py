@@ -74,8 +74,8 @@ def test_option_value_str():
 def test_parse_option_value():
     assert _parse_option_value("'True'") == "True"
     assert _parse_option_value('"TRUE"') == "TRUE"
-    assert _parse_option_value("True") == True
-    assert _parse_option_value("TRUE") == True
+    assert _parse_option_value("True")
+    assert _parse_option_value("TRUE")
     assert type(_parse_option_value("42")) == int
     assert type(_parse_option_value("42.")) == float
     assert type(_parse_option_value("42")) == int

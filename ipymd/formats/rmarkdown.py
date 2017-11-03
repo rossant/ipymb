@@ -5,9 +5,9 @@
 
 """
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Imports
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 import re
 import os.path
@@ -25,14 +25,15 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ..utils.utils import _read_text, _write_text, _get_cell_types
 from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, \
-    _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, _get_nb_html_path
+    _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, \
+    _get_nb_html_path
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
 from ipymd.core.format_manager import convert
 
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # R Markdown
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 
 class RmarkdownReader(object):
@@ -40,9 +41,9 @@ class RmarkdownReader(object):
     Output format is a jupyter nbformat object.
 
     Unlike all other ipymd readers, this class uses the jupyter nbformat
-    as internal representation of the notebook. The jupyter format was chosen as internal format to enable
-    more complex outputs (i.e. multiple outputs per cell, including
-    multiple images)"""
+    as internal representation of the notebook. The jupyter format was chosen
+    as internal format to enable more complex outputs
+    (i.e. multiple outputs per cell, including multiple images)"""
 
     def __init__(self):
         self._rmd_reader = RmdReader()
@@ -70,13 +71,14 @@ class RmarkdownReader(object):
         return nb_rmd
 
     def _check_notebook_consistency(self, rmd_cells, html_cells):
-        """The lists of cells are considered consistent if the cell types appear in the same order. """
+        """The lists of cells are considered consistent if the cell
+        types appear in the same order. """
         return _get_cell_types(rmd_cells) == _get_cell_types(html_cells)
 
 
 class RmdReader(BaseMarkdownReader):
     """Read RMarkdown .Rmd files"""
-    def __init__(self, prompt=None):
+    def __init__(self):
         super(RmdReader, self).__init__()
 
     def read(self, text, rules=None):
@@ -168,7 +170,8 @@ class HtmlNbReader(object):
     def _parse_html(self, html):
         """ get a list of rnb-text and rnb-chunks"""
         for start_tag, contents, end_tag in self.def_text_or_chunk.findall(html):
-            assert start_tag == end_tag, "text and chunk blocks must not be nested."
+            assert start_tag == end_tag, \
+                "text and chunk blocks must not be nested."
             yield start_tag, contents.strip()
 
     def _parse_image(self, html):
@@ -193,7 +196,8 @@ class HtmlNbReader(object):
         cell = None
 
         for start_tag, b64, contents, end_tag in self.def_chunk_element.findall(chunk_block):
-            assert start_tag == end_tag, "different chunk elements must not be nested. "
+            assert start_tag == end_tag, \
+                "different chunk elements must not be nested. "
             b64 = b64.strip()
             contents = contents.strip()
             if start_tag == 'source':
@@ -284,7 +288,8 @@ class RmdWriter(BaseMarkdownWriter):
         super(RmdWriter, self).__init__()
 
     def append_code(self, input, output=None, metadata=None):
-        code_block = '```{{{meta}}}\n{code}\n```'.format(meta=self._encode_metadata(metadata), code=input.rstrip())
+        code_block = '```{{{meta}}}\n{code}\n```'.format(
+            meta=self._encode_metadata(metadata), code=input.rstrip())
         self._output.write(code_block)
 
     def _encode_metadata(self, metadata):
@@ -292,9 +297,11 @@ class RmdWriter(BaseMarkdownWriter):
             return "{}={}".format(key, _option_value_str(value))
 
         if metadata is not None:
-            lang = metadata.pop('lang', 'python')  # TODO derive default lang from kernel
+            # TODO derive default lang from kernel
+            lang = metadata.pop('lang', 'python')
             name = metadata.pop('name', None)
-            options = ", ".join(encode_option(k, v) for k, v in metadata.items())
+            options = ", ".join(encode_option(k, v)
+                                for k, v in metadata.items())
 
         else:
             # TODO tmp workaround
