@@ -1,6 +1,6 @@
 """Test the notebook utils. """
-from ._notebook_utils import _assert_cell_outputs_equal, _assert_notebooks_equal
-from ._utils import _read_test_file
+from ..notebook import _assert_cell_outputs_equal, _assert_notebooks_equal
+from ipymd.formats.tests._utils import _read_test_file
 import pytest
 
 
@@ -38,6 +38,13 @@ def test_cell_outputs_equal():
         "metadata": {'foo': 'bar'},
         "data": {'text/plain': "[1]  1  2  3  4  5  6  7  8  9 10"}
     }
+    # output split up as list.
+    out6 = {
+        "execution_count": 1,
+        "output_type": "execute_result",
+        "metadata": {'output_type': 'output'},
+        "data": {'text/plain': ["[1]  1  2  3  4  5  6  7  8  9 10"]}
+    }
     _assert_cell_outputs_equal(out1, out1)
     with pytest.raises(AssertionError):
         _assert_cell_outputs_equal(out1, out2)
@@ -46,6 +53,7 @@ def test_cell_outputs_equal():
     _assert_cell_outputs_equal(out1, out5, check_metadata=False)
     with pytest.raises(AssertionError):
         _assert_cell_outputs_equal(out1, out5)
+    _assert_cell_outputs_equal(out1, out6)
 
 
 def test_assert_notebook_equals():

@@ -19,44 +19,7 @@ from ..lib.markdown import MarkdownFilter
 from ..lib.python import PythonFilter
 from ..ext.six import string_types
 from ..utils.utils import _ensure_string
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _cell_input(cell):
-    """Return the input of an ipynb cell."""
-    return _ensure_string(cell.get('source', []))
-
-
-def _cell_output(cell):
-    """Return the output of an ipynb cell."""
-    outputs = cell.get('outputs', [])
-    # Add stdout.
-    stdout = ('\n'.join(_ensure_string(output.get('text', ''))
-                        for output in outputs)).rstrip()
-    # Add text output.
-    text_outputs = []
-    for output in outputs:
-        out = output.get('data', {}).get('text/plain', [])
-        out = _ensure_string(out)
-        # HACK: skip <matplotlib ...> outputs.
-        if out.startswith('<matplotlib'):
-            continue
-        text_outputs.append(out)
-    return stdout + '\n'.join(text_outputs).rstrip()
-
-
-def _compare_notebook_cells(cell_0, cell_1):
-    return all((cell_0['cell_type'] == cell_1['cell_type'],
-                _cell_input(cell_0) == _cell_input(cell_1),
-                _cell_output(cell_0) == _cell_output(cell_1)))
-
-
-def _compare_notebooks(nb_0, nb_1):
-    return all(_compare_notebook_cells(cell_0, cell_1)
-               for cell_0, cell_1 in zip(nb_0['cells'], nb_1['cells']))
+from ..lib.notebook import _cell_input, _cell_output
 
 
 #------------------------------------------------------------------------------

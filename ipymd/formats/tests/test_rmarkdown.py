@@ -8,7 +8,7 @@
 
 from ipymd.core.format_manager import convert
 from ._utils import _read_test_file
-from ._notebook_utils import _assert_notebooks_equal
+from ...lib.notebook import _assert_notebooks_equal
 from ipymd.formats.rmarkdown import HtmlNbChunkCell, RmarkdownWriter, \
     RmarkdownReader, RmdWriter, RmdReader, NbHtmlWriter, HtmlNbReader
 
