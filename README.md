@@ -2,6 +2,14 @@
 [![Coverage Status](https://coveralls.io/repos/rossant/ipymd/badge.svg)](https://coveralls.io/r/rossant/ipymd)
 
 # Replace .ipynb with .md in the IPython Notebook
+** the goal of this for is to implement the [R Notebook](http://rmarkdown.rstudio.com/r_notebook_format.html) format as a file format for jupyter **
+
+This format stores the output in a separate `.nb.html` file, while the code chunks and markdown cells go into a `.Rmd` file. 
+This has the advantage over pure markdown, that the output can be stored (including images) and the advantage over `.ipynb` that it works well with git and is editable in a text editor. 
+
+
+---------
+
 
 The goal of ipymd is to replace `.ipynb` notebook files like:
 
