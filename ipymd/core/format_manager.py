@@ -12,6 +12,7 @@ import os
 import os.path as op
 import glob
 import json
+import notebook.transutils
 
 from pkg_resources import iter_entry_points, DistributionNotFound
 
