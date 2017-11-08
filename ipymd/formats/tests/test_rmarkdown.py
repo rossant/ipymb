@@ -39,11 +39,24 @@ def test_htmlnb_parse_image():
     htmlnbreader = HtmlNbReader()
 
     html = '<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhE' \
-           'UgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAABAQEJCQ...==" /></p>'
+           'UgAAAjwAAAFhCAMAAABDKYAcAAACTFBMVEUAAAA\nBAQEJCQ...==" /></p>'
     mime, data = list(htmlnbreader._parse_image(html))
     assert mime == 'image/png'
     assert data == "iVBORw0KGgoAAAANSUhEUgAAAjwAAAFhCAMAAABDKYAcAAACT" \
-                   "FBMVEUAAAABAQEJCQ...=="
+                   "FBMVEUAAAA\nBAQEJCQ...=="
+
+    html = ('<!-- rnb-plot-begin -->\n'
+            '<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWQA'
+            'AAD8CAYAAABAWd66AAAABHNCSVQICAgIfAhkiAAAAAlwSFlz\n'
+            'AAALEgAACxIB0t1+/AAACDBJREFUeJzt3c2LnWcZx/Hf1RmlScW'
+            'XklJwWpzKiCUIUglSLbiwLnxD\n" /></p>\n'
+            '<!-- rnb-plot-end -->')
+    mime, data = list(htmlnbreader._parse_image(html))
+    assert mime == 'image/png'
+    assert data == "iVBORw0KGgoAAAANSUhEUgAAAWQAAAD8CAYAAABAWd66AAAABHNCSV" \
+                   "QICAgIfAhkiAAAAAlwSFlz\n" \
+                   "AAALEgAACxIB0t1+/AAACDBJREFUeJzt3c2LnWcZx/Hf1RmlScW" \
+                   "XklJwWpzKiCUIUglSLbiwLnxD\n"
 
     html = """<p><a>some other html</a></p>"""
     mime, data = list(htmlnbreader._parse_image(html))
@@ -263,6 +276,19 @@ def _test_rmarkdown_rmarkdown(basename):
     assert converted['html'] == contents['html']
 
 
+def _test_notebook_notebook(basename):
+    """check that converting a notebook to Rmarkdown and back
+    is the identity"""
+    # makes only sense with verbose metadata
+    _fm = format_manager()
+    _fm.verbose_metadata = True
+    contents = _read_test_file(basename, 'notebook')
+    rmarkdown = convert(contents, from_='notebook', to='rmarkdown')
+    converted = convert(rmarkdown, from_='rmarkdown', to='notebook')
+
+    _assert_notebooks_equal(contents, converted, check_cell_metadata=False)
+
+
 def test_ex5_reader():
     _test_rmarkdown_reader('ex5')
 
@@ -285,3 +311,7 @@ def test_ex6_writer():
 
 def test_ex6_rmarkdown_rmarkdown():
     _test_rmarkdown_rmarkdown('ex6')
+
+
+def test_ex6_notebook_notebook():
+    _test_notebook_notebook('ex6')

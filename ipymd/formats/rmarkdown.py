@@ -155,7 +155,7 @@ class HtmlNbReader(object):
     )
 
     def_image_element = re.compile(
-        r'<img src="data:(.*?);base64,(.*?)" />'
+        r'<img src="data:(.*?);base64,([\s\S]*?)" />'
     )
 
     def __init__(self):
@@ -184,7 +184,7 @@ class HtmlNbReader(object):
             mime, data = next(iter(self.def_image_element.findall(html)))
         except StopIteration:
             mime = 'text/plain'
-            data = 'Error reading image.'
+            data = 'IPYMD: Error reading image.'
         return mime, data
 
     def _text_cell(self, text_block):
@@ -378,7 +378,7 @@ class NbHtmlWriter(object):
         assert output['output_type'] in ['execute_result', 'display_data']
         # text first!
         try:
-            text = output['data'].pop('text/plain')
+            text = _ensure_string(output['data'].pop('text/plain'))
             yield self._create_tag('output',
                                    tag_content=self._format_text_output(text),
                                    tag_meta={'data': text})
@@ -478,8 +478,8 @@ def save_rmarkdown(path, contents):
     """
     html_path = _get_nb_html_path(path)
     _write_text(path, contents['rmd'])
-    # if contents['html'] is not None:
-    #     _write_text(html_path, contents['html'])
+    if contents['html'] is not None:
+        _write_text(html_path, contents['html'])
 
 
 RMD_FORMAT = dict(

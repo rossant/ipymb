@@ -220,11 +220,12 @@ class HtmlNbChunkCell(object):
                               metadata={"output_type": tag}))
 
     def new_plot(self, mime, data, b64):
+        meta = {} if not b64 else _read_rmd_b64(b64)
         self._cell.outputs.append(
             nbf.v4.new_output('execute_result',
                               {mime: data},
                               execution_count=self._count,
-                              metadata=_read_rmd_b64(b64))
+                              metadata=meta)
         )
 
     @property
