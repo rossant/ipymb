@@ -198,7 +198,8 @@ class HtmlNbReader(object):
         #
         # "source",  "plot", "output",
         # "warning", "error", "message"
-        cell = None
+        cell = HtmlNbChunkCell(self._count)
+        self._count += 1
 
         for start_tag, b64, contents, end_tag in self.def_chunk_element.findall(chunk_block):
             assert start_tag == end_tag, \
@@ -206,7 +207,8 @@ class HtmlNbReader(object):
             b64 = b64.strip()
             contents = contents.strip()
             if start_tag == 'source':
-                cell = HtmlNbChunkCell(b64, self._count)
+                # we ignore the source as we obtain it from .Rmd
+                pass
             elif start_tag in ['output', 'warning', 'error', 'message']:
                 assert cell is not None, "output without source"
                 cell.new_output(start_tag, b64)
@@ -215,7 +217,6 @@ class HtmlNbReader(object):
                 mime, data = self._parse_image(contents)
                 cell.new_plot(mime, data, b64)
 
-        self._count += 1
         return cell.cell
 
 
@@ -374,7 +375,7 @@ class NbHtmlWriter(object):
     def _create_output_tag(self, output):
         """yield tags such as <!--rnb-plot-begin"""
         output = _stream_output_to_result(output)
-        assert output['output_type'] == 'execute_result'
+        assert output['output_type'] in ['execute_result', 'display_data']
         # text first!
         try:
             text = output['data'].pop('text/plain')

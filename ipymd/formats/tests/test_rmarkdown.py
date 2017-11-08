@@ -6,13 +6,14 @@
 # Imports
 # ------------------------------------------------------------------------------
 
-from ipymd.core.format_manager import convert
+from ipymd.core.format_manager import convert, format_manager
 from ._utils import _read_test_file
 from ...lib.notebook import _assert_notebooks_equal
 from ipymd.formats.rmarkdown import HtmlNbChunkCell, RmarkdownWriter, \
     RmarkdownReader, RmdWriter, RmdReader, NbHtmlWriter, HtmlNbReader
 
 from collections import OrderedDict
+import json
 
 
 # ------------------------------------------------------------------------------
@@ -250,10 +251,13 @@ def _test_rmarkdown_writer(basename):
 
 def _test_rmarkdown_rmarkdown(basename):
     """Check that the double conversion is the identity."""
-
+    # makes only sense with verbose metadata
+    _fm = format_manager()
+    _fm.verbose_metadata = True
     contents = _read_test_file(basename, 'rmarkdown')
     notebook = convert(contents, from_='rmarkdown', to='notebook')
-    converted = convert(notebook, from_='notebook', to='rmarkdown')
+    notebook_dict = json.loads(json.dumps(notebook))
+    converted = convert(notebook_dict, from_='notebook', to='rmarkdown')
 
     assert converted['rmd'] == contents['rmd']
     assert converted['html'] == contents['html']

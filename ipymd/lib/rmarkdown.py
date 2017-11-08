@@ -206,9 +206,8 @@ class HtmlNbChunkCell(object):
     NO_META_FROM_HTMLNB = "Cell metadata is not parsed from .html.nb. " \
                           "Use metadata provided by *.Rmd instead. "
 
-    def __init__(self, b64, execution_count):
+    def __init__(self, execution_count):
         self._count = execution_count
-        # fences = _read_rmd_b64(b64)['data'].strip()
         self._cell = nbf.v4.new_code_cell(self.NO_CODE_FROM_HTMLNB,
                                           execution_count=self._count)
 
