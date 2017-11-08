@@ -270,6 +270,13 @@ class RmdWriter(BaseMarkdownWriter):
             meta=self._encode_metadata(metadata), code=input.rstrip())
         self._output.write(code_block)
 
+    def append_markdown(self, source, metadata):
+        source = _ensure_string(source)
+        if metadata is not None and len(metadata) > 0:
+            raise RuntimeWarning("Metadata for markdown cells is currently"
+                                 "not supported.")
+        self._output.write(source.rstrip())
+
     def _encode_metadata(self, metadata):
         def encode_option(key, value):
             return "{}={}".format(key, _option_value_str(value))
@@ -428,7 +435,14 @@ class NbHtmlWriter(object):
     @property
     def contents(self):
         base64_rmd = base64.b64encode(self._rmd_writer.contents.encode())
-        return self.template.render(base64_rmd=base64_rmd)
+        html_nb = self._output.getvalue().rstrip() + '\n'
+        # TODO is the filename in javascript necessary for anything_
+        # the writer does not know anything about the filename
+        # therefore we use a hardcoded filename as workaround.
+        filename = "notebook.Rmd"
+        return self.template.render(filename=filename,
+                                    html_nb=html_nb,
+                                    base64_rmd=base64_rmd)
 
 
 def load_rmarkdown(path):
