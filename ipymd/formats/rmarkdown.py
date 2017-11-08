@@ -12,8 +12,9 @@
 import re
 import os.path
 
-import base64
 import json
+import pypandoc
+from html import escape as html_escape
 
 try:
     import nbformat as nbf
@@ -22,13 +23,13 @@ except ImportError:
     import IPython.nbformat as nbf
     from IPython.nbformat.v4.nbbase import validate
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader, select_autoescape, Markup
 
 from ..utils.utils import _read_text, _write_text, _get_cell_types, \
     _ensure_string
 from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, \
     _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, \
-    _get_nb_html_path
+    _get_nb_html_path, _b64_encode
 from ..lib.notebook import _stream_output_to_result
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
 from ipymd.core.format_manager import convert
@@ -266,9 +267,12 @@ class RmdWriter(BaseMarkdownWriter):
 
     def append_code(self, input, output=None, metadata=None):
         input = _ensure_string(input)
-        code_block = '```{{{meta}}}\n{code}\n```'.format(
-            meta=self._encode_metadata(metadata), code=input.rstrip())
-        self._output.write(code_block)
+        self._output.write(self._code_block(input, metadata))
+
+    @staticmethod
+    def _code_block(code, meta):
+        return '```{{{meta}}}\n{code}\n```'.format(
+            meta=RmdWriter._encode_metadata(meta), code=code.rstrip())
 
     def append_markdown(self, source, metadata):
         source = _ensure_string(source)
@@ -277,7 +281,8 @@ class RmdWriter(BaseMarkdownWriter):
                                  "not supported.")
         self._output.write(source.rstrip())
 
-    def _encode_metadata(self, metadata):
+    @staticmethod
+    def _encode_metadata(metadata):
         def encode_option(key, value):
             return "{}={}".format(key, _option_value_str(value))
 
@@ -341,21 +346,29 @@ class NbHtmlWriter(object):
         return env.get_template('r_notebook.template.html')
 
     def append_markdown(self, markdown, metadata):
-        # TODO markdown to html, maybe check how it's done in Rmarkdown for full compatibility
-        self._output.write(self._create_tag('text', markdown, metadata))
+        markdown = _ensure_string(markdown)
+        html = pypandoc.convert_text(markdown, 'html', format='md')
+        self._output.write(self._create_tag('text', html, metadata) + "\n")
 
     def append_code(self, source, outputs, metadata):
+        source = _ensure_string(source)
+
+        # Markdown representation of code is given as b64 in nb.html
+        # TODO derive default lang from kernel
+        lang = metadata.get('lang', 'python')
+        source_as_markdown = BaseMarkdownWriter.format_code(source, lang)
+
         child_tags = []
         child_tags.append(
             self._create_tag('source',
                              tag_content=self._format_source(source, metadata),
-                             tag_meta={'data': source})
+                             tag_meta={'data': source_as_markdown})
         )
         for output in outputs:
             child_tags.extend(self._create_output_tag(output))
 
         self._output.write(
-            self._create_tag('chunk', "\n".join(child_tags))
+            self._create_tag('chunk', "\n".join(child_tags) + "\n") + "\n"
         )
 
     def _create_output_tag(self, output):
@@ -366,8 +379,8 @@ class NbHtmlWriter(object):
         try:
             text = output['data'].pop('text/plain')
             yield self._create_tag('output',
-                                   self._format_text_output(text),
-                                   output['metadata'])
+                                   tag_content=self._format_text_output(text),
+                                   tag_meta={'data': text})
         except KeyError:
             pass
 
@@ -375,8 +388,9 @@ class NbHtmlWriter(object):
         for mime, data in output['data'].items():
             if mime.startswith('image/'):
                 yield self._create_tag('plot',
-                                       self._format_image(mime, data),
-                                       output['metadata'])
+                                       tag_content=self._format_image(
+                                           mime, data),
+                                       tag_meta=output['metadata'])
             else:
                 raise RuntimeError("Invalid output mime-type: {}".format(mime))
 
@@ -385,8 +399,8 @@ class NbHtmlWriter(object):
         """Format contents of source tag. """
         # TODO default lang?
         lang = metadata.get('lang', 'raw')
-        return '<pre class="{lang}"><code>{source}/code></pre>'.format(
-            lang=lang, source=source
+        return '<pre class="{lang}"><code>{source}</code></pre>'.format(
+            lang=lang, source=html_escape(source)
         )
 
     @staticmethod
@@ -418,11 +432,11 @@ class NbHtmlWriter(object):
             <!-- rnb-tag-begin>some contents<!--rnb-tag-end-->\n
 
         """
-        meta_b64 = "" if tag_meta is None else base64.b64encode(
-            json.dumps(tag_meta).encode('utf-8'))
+        meta_b64 = "" if tag_meta is None or tag_meta == {} else _b64_encode(
+            json.dumps(tag_meta))
         return "<!-- rnb-{tag}-begin {b64}-->\n" \
                "{contents}\n" \
-               "<!-- rnb-{tag}-end -->\n".format(tag=tag_name, b64=meta_b64,
+               "<!-- rnb-{tag}-end -->".format(tag=tag_name, b64=meta_b64,
                                                contents=tag_content)
 
     def write(self, cell):
@@ -434,8 +448,8 @@ class NbHtmlWriter(object):
 
     @property
     def contents(self):
-        base64_rmd = base64.b64encode(self._rmd_writer.contents.encode())
-        html_nb = self._output.getvalue().rstrip() + '\n'
+        base64_rmd = _b64_encode(self._rmd_writer.contents)
+        html_nb = Markup(self._output.getvalue().rstrip() + '\n')
         # TODO is the filename in javascript necessary for anything_
         # the writer does not know anything about the filename
         # therefore we use a hardcoded filename as workaround.

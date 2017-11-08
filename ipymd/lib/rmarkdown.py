@@ -31,6 +31,12 @@ literal_to_str = {
 }
 
 
+def _b64_encode(text):
+    """Encode a string to base64. Unlike base64.b64encode,
+    input and output are utf-8 strings. """
+    return base64.b64encode(text.encode('utf-8')).decode('utf-8')
+
+
 def _tokenize_chunk_options(options_line):
     """
     Break an options line into a list of tokens.

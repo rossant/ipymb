@@ -85,7 +85,7 @@ setup(
             'python=ipymd.formats.python:PYTHON_FORMAT',
         ]
     },
-    install_requires=['pyyaml', 'jinja2'],
+    install_requires=['pyyaml', 'jinja2', 'pypandoc'],
     extras_require={
         'odf': ['odfpy'],
     },
