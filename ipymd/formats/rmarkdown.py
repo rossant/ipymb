@@ -75,7 +75,8 @@ class RmarkdownReader(object):
                     rmd_cell['outputs'] = html_cell['outputs']
         return nb_rmd
 
-    def _check_notebook_consistency(self, rmd_cells, html_cells):
+    @staticmethod
+    def _check_notebook_consistency(rmd_cells, html_cells):
         """The lists of cells are considered consistent if the cell
         types appear in the same order. """
         return _get_cell_types(rmd_cells) == _get_cell_types(html_cells)
@@ -187,7 +188,8 @@ class HtmlNbReader(object):
             data = 'IPYMD: Error reading image.'
         return mime, data
 
-    def _text_cell(self, text_block):
+    @staticmethod
+    def _text_cell(text_block):
         # new markdown cell will be filled with html. The corresponding
         # source is found in .Rmd file.
         return nbf.v4.new_markdown_cell(text_block)
@@ -223,9 +225,12 @@ class HtmlNbReader(object):
 class RmarkdownWriter(object):
     """Write R notebook (combine .Rmd and .nb.html) """
 
+    DEFAULT_LANGUAGE = "python"  # if, for whatever reason, no metadata is set
+
     def __init__(self):
-        self._rmd_writer = RmdWriter()
-        self._nb_html_writer = NbHtmlWriter(self._rmd_writer)
+        self._language = self.DEFAULT_LANGUAGE
+        self.rmd_writer = RmdWriter(self)
+        self.nb_html_writer = NbHtmlWriter(self)
 
     def write_contents(self, nb):
         """convert a jupyter notebook dict to rmarkdown"""
@@ -234,26 +239,35 @@ class RmarkdownWriter(object):
         # nb = nbf.from_dict(nb)
         assert nb['nbformat'] >= 4
 
+        try:
+            self._language = nb['metadata']['kernelspec']['language']
+        except KeyError:
+            pass
+
         self.write_notebook_metadata(nb['metadata'])
         for cell in nb['cells']:
             self.write(cell)
 
     def write(self, cell):
-        self._rmd_writer.write(cell)
-        self._nb_html_writer.write(cell)
+        self.rmd_writer.write(cell)
+        self.nb_html_writer.write(cell)
 
     def write_notebook_metadata(self, metadata):
-        # metadata = json.loads(json.dumps(metadata))
-        self._rmd_writer.write_notebook_metadata(metadata)
+        self.rmd_writer.write_notebook_metadata(metadata)
 
     def close(self):
-        self._rmd_writer.close()
+        self.rmd_writer.close()
+
+    @property
+    def kernel_lang(self):
+        """get the kernel language"""
+        return self._language
 
     @property
     def contents(self):
         return {
-            'rmd': self._rmd_writer.contents,
-            'html': self._nb_html_writer.contents
+            'rmd': self.rmd_writer.contents,
+            'html': self.nb_html_writer.contents
         }
 
     def __del__(self):
@@ -263,17 +277,17 @@ class RmarkdownWriter(object):
 class RmdWriter(BaseMarkdownWriter):
     """Default .Rmd writer."""
 
-    def __init__(self):
+    def __init__(self, rmarkdown_writer):
         super(RmdWriter, self).__init__()
+        self._rmarkdown_writer = rmarkdown_writer
 
     def append_code(self, input, output=None, metadata=None):
         input = _ensure_string(input)
         self._output.write(self._code_block(input, metadata))
 
-    @staticmethod
-    def _code_block(code, meta):
+    def _code_block(self, code, meta):
         return '```{{{meta}}}\n{code}\n```'.format(
-            meta=RmdWriter._encode_metadata(meta), code=code.rstrip())
+            meta=self._encode_metadata(meta), code=code.rstrip())
 
     def append_markdown(self, source, metadata):
         source = _ensure_string(source)
@@ -282,23 +296,16 @@ class RmdWriter(BaseMarkdownWriter):
                                  "not supported.")
         self._output.write(source.rstrip())
 
-    @staticmethod
-    def _encode_metadata(metadata):
+    def _encode_metadata(self, metadata):
         def encode_option(key, value):
             return "{}={}".format(key, _option_value_str(value))
 
-        if metadata is not None:
-            # TODO derive default lang from kernel
-            lang = metadata.pop('lang', 'python')
-            name = metadata.pop('name', None)
-            options = ", ".join(encode_option(k, v)
-                                for k, v in metadata.items())
+        metadata = {} if metadata is None else metadata
 
-        else:
-            # TODO tmp workaround
-            lang = "python"
-            name = None
-            options = ""
+        lang = metadata.pop('lang', self._rmarkdown_writer.kernel_lang)
+        name = metadata.pop('name', None)
+        options = ", ".join(encode_option(k, v)
+                            for k, v in metadata.items())
 
         out = [lang]
         if name is not None:
@@ -325,16 +332,16 @@ class RmdWriter(BaseMarkdownWriter):
 
 class NbHtmlWriter(object):
     """ Write R notebook .nb.html """
-    def __init__(self, rmd_writer):
+    def __init__(self, rmarkdown_writer):
         """
 
         Parameters
         ----------
-        rmd_writer: RmdWriter
-            a reference to the corresponding RmdWriter, as the rmd output
-            will also be encoded in the html output.
+        rmarkdown_writer: RmarkdownWriter
+            a reference to the parent RmarkdownWriter
         """
-        self._rmd_writer = rmd_writer
+        self._rmarkdown_writer = rmarkdown_writer
+        self._rmd_writer = rmarkdown_writer.rmd_writer
         self._output = StringIO()
 
     @property
@@ -355,14 +362,13 @@ class NbHtmlWriter(object):
         source = _ensure_string(source)
 
         # Markdown representation of code is given as b64 in nb.html
-        # TODO derive default lang from kernel
-        lang = metadata.get('lang', 'python')
+        lang = metadata.get('lang', self._rmarkdown_writer.kernel_lang)
         source_as_markdown = BaseMarkdownWriter.format_code(source, lang)
 
         child_tags = []
         child_tags.append(
             self._create_tag('source',
-                             tag_content=self._format_source(source, metadata),
+                             tag_content=self._format_source(source, lang),
                              tag_meta={'data': source_as_markdown})
         )
         for output in outputs:
@@ -396,10 +402,8 @@ class NbHtmlWriter(object):
                 raise RuntimeError("Invalid output mime-type: {}".format(mime))
 
     @staticmethod
-    def _format_source(source, metadata):
+    def _format_source(source, lang):
         """Format contents of source tag. """
-        # TODO default lang?
-        lang = metadata.get('lang', 'raw')
         return '<pre class="{lang}"><code>{source}</code></pre>'.format(
             lang=lang, source=html_escape(source)
         )

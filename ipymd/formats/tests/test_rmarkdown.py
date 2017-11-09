@@ -61,7 +61,7 @@ def test_htmlnb_parse_image():
     html = """<p><a>some other html</a></p>"""
     mime, data = list(htmlnbreader._parse_image(html))
     assert mime == 'text/plain'
-    assert data == 'Error reading image.'
+    assert data == 'IPYMD: Error reading image.'
 
 
 def test_htmlnb_chunk_cell():
@@ -229,7 +229,7 @@ def test_rmd_write_cell_metadata():
                               ('bool_type', True),
                               ('null_type', None)])
 
-    rmdreader = RmdWriter()
+    rmdreader = RmdWriter(RmarkdownWriter())
     result = rmdreader._encode_metadata(chunk_meta)
     # we know that all strings will be double-quoted.
     expected = expected.replace("'", '"')
