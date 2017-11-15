@@ -3,6 +3,7 @@ from collections import namedtuple, OrderedDict
 import base64
 import json
 from ipymd.ext.six import string_types
+from html import escape as _html_escape
 
 try:
     import nbformat as nbf
@@ -200,6 +201,11 @@ def _merge_consecutive_markdown_cells(cells):
     return merged
 
 
+def html_escape(s):
+    """escape HTML and double quotes only. """
+    return _html_escape(s, quote=False).replace('"', "&quot;")
+
+
 class HtmlNbChunkCell(object):
     NO_CODE_FROM_HTMLNB = "Code is not parsed from .html.nb. " \
                           "Use code provided by *.Rmd instead. "
@@ -227,6 +233,18 @@ class HtmlNbChunkCell(object):
                               {mime: data},
                               execution_count=self._count,
                               metadata=meta)
+        )
+
+    def new_error(self, b64):
+        err_dict = {} if not b64 else _read_rmd_b64(b64)
+        traceback = [str(x) for x in err_dict.get("traceback", [])]
+        ename = err_dict.get("ename", "")
+        evalue = err_dict.get("evalue", "")
+        self._cell.outputs.append(
+            nbf.v4.new_output('error',
+                              traceback=traceback,
+                              ename=ename,
+                              evalue=evalue)
         )
 
     @property

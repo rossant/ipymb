@@ -14,7 +14,6 @@ import os.path
 
 import json
 import pypandoc
-from html import escape as html_escape
 
 try:
     import nbformat as nbf
@@ -29,7 +28,7 @@ from ..utils.utils import _read_text, _write_text, _get_cell_types, \
     _ensure_string
 from ..lib.rmarkdown import _option_value_str, _parse_chunk_meta, \
     _merge_consecutive_markdown_cells, _is_code_chunk, HtmlNbChunkCell, \
-    _get_nb_html_path, _b64_encode
+    _get_nb_html_path, _b64_encode, html_escape
 from ..lib.notebook import _stream_output_to_result
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
 from ipymd.core.format_manager import convert
@@ -211,9 +210,12 @@ class HtmlNbReader(object):
             if start_tag == 'source':
                 # we ignore the source as we obtain it from .Rmd
                 pass
-            elif start_tag in ['output', 'warning', 'error', 'message']:
+            elif start_tag in ['output', 'warning', 'message']:
                 assert cell is not None, "output without source"
                 cell.new_output(start_tag, b64)
+            elif start_tag == 'error':
+                assert cell is not None, "error without source"
+                cell.new_error(b64)
             elif start_tag == 'plot':
                 assert cell is not None, "plot without source"
                 mime, data = self._parse_image(contents)
@@ -254,6 +256,7 @@ class RmarkdownWriter(object):
 
     def write_notebook_metadata(self, metadata):
         self.rmd_writer.write_notebook_metadata(metadata)
+        self.nb_html_writer.write_notebook_metadata(metadata)
 
     def close(self):
         self.rmd_writer.close()
@@ -343,6 +346,7 @@ class NbHtmlWriter(object):
         self._rmarkdown_writer = rmarkdown_writer
         self._rmd_writer = rmarkdown_writer.rmd_writer
         self._output = StringIO()
+        self._metadata = {}
 
     @property
     def template(self):
@@ -381,8 +385,33 @@ class NbHtmlWriter(object):
     def _create_output_tag(self, output):
         """yield tags such as <!--rnb-plot-begin"""
         output = _stream_output_to_result(output)
-        assert output['output_type'] in ['execute_result', 'display_data']
-        # text first!
+        assert output['output_type'] in ['execute_result',
+                                         'display_data', 'error']
+
+        if output['output_type'] == 'error':
+            yield from self._create_output_tag_error(output)
+        else:
+            # text first!
+            yield from self._create_output_tag_text(output)
+
+            # then images...
+            yield from self._create_output_tag_image(output)
+
+    def _create_output_tag_error(self, output):
+        try:
+            traceback = output['traceback']
+            yield self._create_tag('error',
+                                   tag_content=self._format_error(
+                                       _ensure_string(traceback)),
+                                   tag_meta={
+                                       'ename': output['ename'],
+                                       'evalue': output['evalue'],
+                                       'traceback': traceback
+                                   })
+        except KeyError:
+            pass
+
+    def _create_output_tag_text(self, output):
         try:
             text = _ensure_string(output['data'].pop('text/plain'))
             yield self._create_tag('output',
@@ -391,7 +420,7 @@ class NbHtmlWriter(object):
         except KeyError:
             pass
 
-        # then images...
+    def _create_output_tag_image(self, output):
         for mime, data in output['data'].items():
             if mime.startswith('image/'):
                 yield self._create_tag('plot',
@@ -402,9 +431,16 @@ class NbHtmlWriter(object):
                 raise RuntimeError("Invalid output mime-type: {}".format(mime))
 
     @staticmethod
+    def _format_error(traceback):
+        """format contents of error message. """
+        return '<pre class="error">{traceback}</pre>\n'.format(
+            traceback=traceback
+        )
+
+    @staticmethod
     def _format_source(source, lang):
         """Format contents of source tag. """
-        return '<pre class="{lang}"><code>{source}</code></pre>'.format(
+        return '<pre class="{lang}"><code>{source}</code></pre>\n'.format(
             lang=lang, source=html_escape(source)
         )
 
@@ -415,7 +451,7 @@ class NbHtmlWriter(object):
 
     @staticmethod
     def _format_text_output(text):
-        return "<pre><code>{}</code></pre>".format(text)
+        return "<pre><code>{}</code></pre>\n".format(text)
 
     @staticmethod
     def _create_tag(tag_name, tag_content, tag_meta=None):
@@ -440,7 +476,7 @@ class NbHtmlWriter(object):
         meta_b64 = "" if tag_meta is None or tag_meta == {} else _b64_encode(
             json.dumps(tag_meta))
         return "<!-- rnb-{tag}-begin {b64}-->\n" \
-               "{contents}\n" \
+               "{contents}" \
                "<!-- rnb-{tag}-end -->".format(tag=tag_name, b64=meta_b64,
                                                contents=tag_content)
 
@@ -451,15 +487,21 @@ class NbHtmlWriter(object):
         elif cell['cell_type'] == 'code':
             self.append_code(cell['source'], cell['outputs'], metadata)
 
+    def write_notebook_metadata(self, metadata):
+        self._metadata = metadata
+
     @property
     def contents(self):
         base64_rmd = _b64_encode(self._rmd_writer.contents)
         html_nb = Markup(self._output.getvalue().rstrip() + '\n')
         # TODO is the filename in javascript necessary for anything_
+        # TODO set title (-> filename)
         # the writer does not know anything about the filename
         # therefore we use a hardcoded filename as workaround.
-        filename = "notebook.Rmd"
+        filename = self._metadata.get("filename", "notebook.Rmd")
+        title = self._metadata.get("title", "IPYMD Notebook")
         return self.template.render(filename=filename,
+                                    title=title,
                                     html_nb=html_nb,
                                     base64_rmd=base64_rmd)
 
