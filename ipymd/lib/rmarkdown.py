@@ -217,7 +217,8 @@ class HtmlNbChunkCell(object):
                               {'text/plain':
                                    _read_rmd_b64(b64)['data'].strip()},
                               execution_count=self._count,
-                              metadata={"output_type": tag}))
+                              # metadata={"output_type": tag}))
+                              metadata={}))
 
     def new_plot(self, mime, data, b64):
         meta = {} if not b64 else _read_rmd_b64(b64)
