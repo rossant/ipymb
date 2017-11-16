@@ -47,20 +47,28 @@ def _assert_cell_outputs_equal(output_0, output_1, check_metadata=True):
         assert output_0['metadata'] == output_1['metadata']
 
 
-def _assert_cells_equal(cell_0, cell_1, check_metadata=True):
+def _assert_cells_equal(cell_0, cell_1, check_metadata=True,
+                        check_outputs=True):
     assert cell_0['cell_type'] == cell_1['cell_type']
     assert _cell_source(cell_0) == _cell_source(cell_1)
-    for output_0, output_1 in zip(_cell_outputs(cell_0), _cell_outputs(cell_1)):
-        _assert_cell_outputs_equal(output_0, output_1,
-                                   check_metadata=check_metadata)
+    if check_outputs:
+        outputs_0 = _cell_outputs(cell_0)
+        outputs_1 = _cell_outputs(cell_1)
+        assert len(outputs_0) == len(outputs_1)
+        for output_0, output_1 in zip(outputs_0, outputs_1):
+            _assert_cell_outputs_equal(output_0, output_1,
+                                       check_metadata=check_metadata)
 
 
 def _assert_notebooks_equal(nb_0, nb_1, check_notebook_metadata=True,
-                            check_cell_metadata=True):
+                            check_cell_metadata=True,
+                            check_cell_outputs=True):
     if check_notebook_metadata:
         assert nb_0['metadata'] == nb_1['metadata']
+    assert len(nb_0['cells']) == len(nb_1['cells'])
     for cell_0, cell_1 in zip(nb_0['cells'], nb_1['cells']):
-        _assert_cells_equal(cell_0, cell_1, check_metadata=check_cell_metadata)
+        _assert_cells_equal(cell_0, cell_1, check_metadata=check_cell_metadata,
+                            check_outputs=check_cell_outputs)
 
 
 def _cell_input(cell):
