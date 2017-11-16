@@ -15,25 +15,77 @@ language_info:
   version: 3.6.2
 ---
 
+# Python notebook tests
+
+Some literal python which is not evaluated:
+
+```python
+print("Hello World!")
+```
+
+## Advanved Markdown
+
 Foo bar kk
 
 $\sum_{i=1}^n 2^i$
+
+## Special characters, text output
 
 ```{python}
 for i in range(10):
     print("ä'<>$& " + str(i))
 ```
 
+## Multiple images in the same output
+
 ```{python}
-import seaborn as sns
-%matplotlib inline
+import numpy as np
+import matplotlib.pyplot as plt
+
+n = 256
+X = np.linspace(-np.pi,np.pi,n,endpoint=True)
+Y = np.sin(2*X)
+
+fig, ax = plt.subplots( nrows=1, ncols=1 )
+ax.plot (X, Y+1, color='blue', alpha=1.00)
+ax.plot (X, Y-1, color='blue', alpha=1.00)
+plt.show()
+
+fig, ax = plt.subplots( nrows=1, ncols=1 )
+ax.plot (X, Y+1, color='red', alpha=1.00)
+ax.plot (X, Y-1, color='red', alpha=1.00)
+plt.show()
+```
+
+## A table
+
+```{python}
+import pandas as pd
+df = pd.DataFrame().assign(x=range(10), y=range(0, 20, 2))
+df
+```
+
+## svg images
+
+```{python, collapsed=TRUE}
+%config InlineBackend.figure_format = 'svg'
 ```
 
 ```{python}
-import seaborn as sns
-sns.boxplot(range(10))
+n = 256
+X = np.linspace(-np.pi,np.pi,n,endpoint=True)
+Y = np.sin(2*X)
+
+fig, ax = plt.subplots( nrows=1, ncols=1 )
+ax.plot (X, Y+1, color='green', alpha=1.00)
+ax.plot (X, Y-1, color='green', alpha=1.00)
+plt.show()
 ```
 
-```{python}
+## An Error
 
+```{python}
+library(knitr)
+library(reticulate)
+knitr::knit_engines$set(python = reticulate::eng_python)
 ```

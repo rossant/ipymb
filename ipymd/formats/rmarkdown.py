@@ -295,8 +295,9 @@ class RmdWriter(BaseMarkdownWriter):
     def append_markdown(self, source, metadata):
         source = _ensure_string(source)
         if metadata is not None and len(metadata) > 0:
-            raise RuntimeWarning("Metadata for markdown cells is currently"
-                                 "not supported.")
+            print("WARNING: Metadata for markdown cells is currently "
+                  "not supported.")
+
         self._output.write(source.rstrip())
 
     def _encode_metadata(self, metadata):
@@ -397,6 +398,11 @@ class NbHtmlWriter(object):
             # then images...
             yield from self._create_output_tag_image(output)
 
+            if len(output.get('data', [])):
+                # if there are other mime types which could not be processed.
+                raise RuntimeError("Invalid output mime-types: {}".format(
+                    ", ".join(output['data'].keys())))
+
     def _create_output_tag_error(self, output):
         try:
             traceback = output['traceback']
@@ -412,23 +418,28 @@ class NbHtmlWriter(object):
             pass
 
     def _create_output_tag_text(self, output):
-        try:
-            text = _ensure_string(output['data'].pop('text/plain'))
-            yield self._create_tag('output',
-                                   tag_content=self._format_text_output(text),
-                                   tag_meta={'data': text})
-        except KeyError:
-            pass
+        # sorted, 'text/plain' first!
+        mime_callbacks = [
+            ('text/plain', self._format_text_output),
+            ('text/html', lambda x: x)
+        ]
+        for mime, mime_callback in mime_callbacks:
+            try:
+                data = _ensure_string(output['data'].pop(mime))
+                yield self._create_tag('output',
+                                       tag_content=mime_callback(data),
+                                       tag_meta={'mime': mime, 'data': data})
+            except KeyError:
+                pass
 
     def _create_output_tag_image(self, output):
-        for mime, data in output['data'].items():
+        for mime in list(output['data']):
             if mime.startswith('image/'):
+                data = output['data'].pop(mime)
                 yield self._create_tag('plot',
                                        tag_content=self._format_image(
                                            mime, data),
                                        tag_meta=output['metadata'])
-            else:
-                raise RuntimeError("Invalid output mime-type: {}".format(mime))
 
     @staticmethod
     def _format_error(traceback):

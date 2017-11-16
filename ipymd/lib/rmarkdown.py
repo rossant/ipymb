@@ -218,10 +218,12 @@ class HtmlNbChunkCell(object):
                                           execution_count=self._count)
 
     def new_output(self, tag, b64):
+        meta = _read_rmd_b64(b64)
+        mime = meta.get('mime', 'text/plain')
         self._cell.outputs.append(
+
             nbf.v4.new_output('execute_result',
-                              {'text/plain':
-                                   _read_rmd_b64(b64)['data'].strip()},
+                              {mime: meta['data'].strip()},
                               execution_count=self._count,
                               # metadata={"output_type": tag}))
                               metadata={}))
