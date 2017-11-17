@@ -17,3 +17,6 @@ dist/
 pytest.ini
 venv
 sandbox
+
+# internal script for development
+convert_testcases.sh
