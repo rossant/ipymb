@@ -9,10 +9,11 @@
 from ipymd.core.format_manager import convert, format_manager
 from ._utils import _read_test_file
 from ...utils.utils import _full_diff
-from ...lib.notebook import _assert_notebooks_equal
+from ...lib.notebook import _assert_notebooks_equal, _assert_cell_outputs_equal
 from ipymd.formats.rmarkdown import HtmlNbChunkCell, RmarkdownWriter, \
     RmarkdownReader, RmdWriter, RmdReader, NbHtmlWriter, HtmlNbReader, \
     RMD_FORMAT
+import pytest
 
 from collections import OrderedDict
 import json
@@ -137,7 +138,7 @@ def test_htmlnb_chunk_cell2():
             "execution_count": 1,
             "output_type": "execute_result",
             "metadata": {},
-            "data": {'text/plain': "[1]  1  2  3  4  5  6  7  8  9 10"}
+            "data": {'text/plain': " [1]  1  2  3  4  5  6  7  8  9 10\n"}
         }]
     }
 
@@ -190,6 +191,92 @@ def test_rmarkdown_read_notebook_metadata():
     }
 
 
+def test_nbhtml_write_output():
+    """test that output is correctly read and written. """
+
+    rmarkdown_writer = RmarkdownWriter()
+    nb_html_writer = NbHtmlWriter(rmarkdown_writer)
+    nb_html_reader = HtmlNbReader()
+
+    text_output = {
+        "data": {
+            "text/plain": "some text"
+        },
+        "output_type": "execute_result",
+        "metadata": {},
+        'execution_count': 1
+    }
+
+    html_chunk = "".join(nb_html_writer._create_output_tag(text_output))
+    cell = nb_html_reader._chunk_cell(html_chunk)
+    _assert_cell_outputs_equal(cell.outputs[0], text_output)
+    assert text_output['data']['text/plain'] in html_chunk
+
+    # should write the image to html, not the plain text!
+    image_output = {
+        "data": {
+            "text/plain": ["some image"],
+            "image/png": "base64 data"
+        },
+        "output_type": "display_data",
+        "metadata": {"x": "y"}
+    }
+
+    html_chunk = "".join(nb_html_writer._create_output_tag(image_output))
+    cell = nb_html_reader._chunk_cell(html_chunk)
+    _assert_cell_outputs_equal(cell.outputs[0], image_output)
+    # test that image is part of html
+    assert image_output['data']['image/png'] in html_chunk
+
+    unknown_output = {
+        "data": {
+            "foo/bar": "should raise an error. "
+        },
+        "output_type": "execute_result",
+        "metadata": {},
+        'execution_count': 2
+    }
+
+    with pytest.raises(RuntimeError):
+        "".join(nb_html_writer._create_output_tag(unknown_output))
+
+    # should write the html to html, not the plain text.
+    html_output = {
+        "data": {
+            "text/plain": "should raise an error. ",
+            "text/html": "<b>Hello World!</b>"
+        },
+        "output_type": "execute_result",
+        "metadata": {},
+        'execution_count': 3
+    }
+
+    html_chunk = "".join(nb_html_writer._create_output_tag(html_output))
+    cell = nb_html_reader._chunk_cell(html_chunk)
+    _assert_cell_outputs_equal(cell.outputs[0], html_output)
+    # test that image is part of html
+    assert html_output['data']['text/html'] in html_chunk
+
+    text_output_with_additional_data = {
+        "data": {
+            "text/plain": "some data",
+            "foo/bar": "will not appear in html, but should be preserved"
+                       "in base64"
+        },
+        "output_type": "execute_result",
+        "metadata": {},
+        'execution_count': 4
+    }
+
+    html_chunk = "".join(nb_html_writer._create_output_tag(
+        text_output_with_additional_data))
+    cell = nb_html_reader._chunk_cell(html_chunk)
+    _assert_cell_outputs_equal(cell.outputs[0],
+                               text_output_with_additional_data)
+    # test that image is part of html
+    assert text_output_with_additional_data['data']['text/plain'] in html_chunk
+
+
 def test_rmarkdown_merge_cells():
     """test that source and output are correctly merged. """
     contents = {
@@ -213,7 +300,7 @@ def test_rmarkdown_merge_cells():
     assert cell['outputs'] == [{
         "output_type": "execute_result",
         'metadata': {},
-        'data': {"text/plain": "[1]  1  2  3  4  5  6  7  8  9 10"},
+        'data': {"text/plain": " [1]  1  2  3  4  5  6  7  8  9 10\n"},
         "execution_count": 1
     }]
 

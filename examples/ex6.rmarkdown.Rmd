@@ -65,13 +65,10 @@ df = pd.DataFrame().assign(x=range(10), y=range(0, 20, 2))
 df
 ```
 
-## svg images
-
-```{python, collapsed=TRUE}
-%config InlineBackend.figure_format = 'svg'
-```
+## SVG image
 
 ```{python}
+%config InlineBackend.figure_format = 'svg'
 n = 256
 X = np.linspace(-np.pi,np.pi,n,endpoint=True)
 Y = np.sin(2*X)

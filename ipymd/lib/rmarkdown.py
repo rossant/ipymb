@@ -218,23 +218,42 @@ class HtmlNbChunkCell(object):
                                           execution_count=self._count)
 
     def new_output(self, tag, b64):
-        meta = _read_rmd_b64(b64)
-        mime = meta.get('mime', 'text/plain')
-        self._cell.outputs.append(
+        b64_data = _read_rmd_b64(b64)
 
-            nbf.v4.new_output('execute_result',
-                              {mime: meta['data'].strip()},
-                              execution_count=self._count,
-                              # metadata={"output_type": tag}))
-                              metadata={}))
+        # fallback for rstudio
+        data = b64_data.get('ipymd.data', {'text/plain': b64_data['data']})
+
+        self._new_generic_output(b64_data, data)
 
     def new_plot(self, mime, data, b64):
-        meta = {} if not b64 else _read_rmd_b64(b64)
+        b64_data = {} if not b64 else _read_rmd_b64(b64)
+
+        # fallback for rstudio
+        data = b64_data.get('ipymd.data', {mime: data})
+
+        self._new_generic_output(b64_data, data)
+
+    def _new_generic_output(self, b64_data, data):
+        """
+
+        Parameters
+        ----------
+        b64_data: data read from base64 string
+        data: data dictionary passed to the output = {'data' : {...} }
+
+        """
+        metadata = b64_data.get('ipymd.metadata', {})
+        output_type = b64_data.get('ipymd.output_type', "execute_result")
+
+        kwargs = {}
+        if output_type == "execute_result":
+            kwargs['execution_count'] = self._count
+
         self._cell.outputs.append(
-            nbf.v4.new_output('execute_result',
-                              {mime: data},
-                              execution_count=self._count,
-                              metadata=meta)
+            nbf.v4.new_output(output_type,
+                              data,
+                              metadata=metadata,
+                              **kwargs)
         )
 
     def new_error(self, b64):

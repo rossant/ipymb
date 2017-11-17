@@ -30,21 +30,35 @@ def _output_ensure_string(*args):
     """make sure that strings split up as a list are coerced into a
     single string. """
     for output in args:
-        for mime, out in output['data'].items():
+        for mime, out in output.get('data', {}).items():
             output['data'][mime] = _ensure_string(out)
+
+
+def _assert_dict_key_equals(field, dict0, dict1):
+    """assert that a field does either not exist in both
+    dictionaries or is equal"""
+    KEY_DOESNT_EXIST = object()
+    assert dict0.get(field, KEY_DOESNT_EXIST) \
+        == dict1.get(field, KEY_DOESNT_EXIST)
 
 
 def _assert_cell_outputs_equal(output_0, output_1, check_metadata=True):
     output_0 = _stream_output_to_result(output_0)
     output_1 = _stream_output_to_result(output_1)
     _output_ensure_string(output_0, output_1)
-    assert output_0['output_type'] == output_1['output_type']
-    assert output_0['data'] == output_1['data']
-    assert output_0['execution_count'] == output_1['execution_count'] or \
-        output_1['execution_count'] is None or \
-        output_0['execution_count'] is None
+
+    fields_to_check = ['output_type', 'data', 'ename', 'evalue', 'traceback']
     if check_metadata:
-        assert output_0['metadata'] == output_1['metadata']
+        fields_to_check.append('metadata')
+
+    for field in fields_to_check:
+        _assert_dict_key_equals(field, output_0, output_1)
+
+    if 'execution_count' in (set(output_0) | set(output_1)):
+        assert output_0['execution_count'] == output_1['execution_count'] or \
+            output_1['execution_count'] is None or \
+            output_0['execution_count'] is None
+
 
 
 def _assert_cells_equal(cell_0, cell_1, check_metadata=True,

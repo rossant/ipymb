@@ -33,6 +33,7 @@ from ..lib.notebook import _stream_output_to_result
 from .markdown import BaseMarkdownReader, BaseMarkdownWriter
 from ipymd.core.format_manager import convert
 from ..ext.six import StringIO
+from collections import OrderedDict
 
 
 # ------------------------------------------------------------------------------
@@ -361,7 +362,8 @@ class NbHtmlWriter(object):
     def append_markdown(self, markdown, metadata):
         markdown = _ensure_string(markdown)
         html = pypandoc.convert_text(markdown, 'html', format='md')
-        self._output.write(self._create_tag('text', html, metadata) + "\n")
+        # ignore metadata, not supported.
+        self._output.write(self._create_tag('text', html) + "\n")
 
     def append_code(self, source, outputs, metadata):
         source = _ensure_string(source)
@@ -384,7 +386,19 @@ class NbHtmlWriter(object):
         )
 
     def _create_output_tag(self, output):
-        """yield tags such as <!--rnb-plot-begin"""
+        """yield tags such as <!--rnb-plot-begin
+
+        Jupyter notebooks can contain multiple mime-types
+        for a single output. In the nb.html representation, this
+        is handled as follows:
+
+        For a given list of 'primary display types' this function
+        knows how to handle the output. The first mime-type found
+        in this list will be visible in the html output.
+
+        All other mime-types will be encoded in the 'metadata'
+        as base64 string.
+        """
         output = _stream_output_to_result(output)
         assert output['output_type'] in ['execute_result',
                                          'display_data', 'error']
@@ -392,16 +406,40 @@ class NbHtmlWriter(object):
         if output['output_type'] == 'error':
             yield from self._create_output_tag_error(output)
         else:
-            # text first!
-            yield from self._create_output_tag_text(output)
+            # look for these mimetypes in the given order.
+            # the first one matching will be visible in html.
+            display_types = OrderedDict()
+            display_types['image/png'] = {
+                'tag': 'plot',  # <!--rnb-{tag}-begin ...
+                'callback': lambda x: self._format_image('image/png', x)
+            }
+            display_types['text/html'] = {
+                'tag': 'output',
+                'callback': lambda x: x
+            }
+            display_types['text/plain'] = {
+                'tag': 'output',
+                'callback': self._format_text_output
+            }
 
-            # then images...
-            yield from self._create_output_tag_image(output)
-
-            if len(output.get('data', [])):
-                # if there are other mime types which could not be processed.
-                raise RuntimeError("Invalid output mime-types: {}".format(
+            try:
+                primary_output_type = [k for k in display_types
+                                       if k in output['data']][0]
+            except IndexError:
+                raise RuntimeError("Unknown output mime-types: {}".format(
                     ", ".join(output['data'].keys())))
+
+            mime_callback = display_types[primary_output_type]['callback']
+            tag_name = display_types[primary_output_type]['tag']
+            data = output['data'][primary_output_type]
+            # 'data' is for compatibility with rstudio
+            tag_meta = {"data": output['data'].get('text/plain', ""),
+                        "ipymd.data": output['data'],
+                        "ipymd.metadata": output.get('metadata', {}),
+                        "ipymd.output_type": output['output_type']}
+            yield self._create_tag(tag_name,
+                                   tag_content=mime_callback(data),
+                                   tag_meta=tag_meta)
 
     def _create_output_tag_error(self, output):
         try:
@@ -416,30 +454,6 @@ class NbHtmlWriter(object):
                                    })
         except KeyError:
             pass
-
-    def _create_output_tag_text(self, output):
-        # sorted, 'text/plain' first!
-        mime_callbacks = [
-            ('text/plain', self._format_text_output),
-            ('text/html', lambda x: x)
-        ]
-        for mime, mime_callback in mime_callbacks:
-            try:
-                data = _ensure_string(output['data'].pop(mime))
-                yield self._create_tag('output',
-                                       tag_content=mime_callback(data),
-                                       tag_meta={'mime': mime, 'data': data})
-            except KeyError:
-                pass
-
-    def _create_output_tag_image(self, output):
-        for mime in list(output['data']):
-            if mime.startswith('image/'):
-                data = output['data'].pop(mime)
-                yield self._create_tag('plot',
-                                       tag_content=self._format_image(
-                                           mime, data),
-                                       tag_meta=output['metadata'])
 
     @staticmethod
     def _format_error(traceback):
