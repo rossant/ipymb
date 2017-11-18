@@ -12,7 +12,7 @@ language_info:
   name: python
   nbconvert_exporter: python
   pygments_lexer: ipython3
-  version: 3.6.2
+  version: 3.6.3
 ---
 
 # Python notebook tests
@@ -63,20 +63,6 @@ plt.show()
 import pandas as pd
 df = pd.DataFrame().assign(x=range(10), y=range(0, 20, 2))
 df
-```
-
-## SVG image
-
-```{python}
-%config InlineBackend.figure_format = 'svg'
-n = 256
-X = np.linspace(-np.pi,np.pi,n,endpoint=True)
-Y = np.sin(2*X)
-
-fig, ax = plt.subplots( nrows=1, ncols=1 )
-ax.plot (X, Y+1, color='green', alpha=1.00)
-ax.plot (X, Y-1, color='green', alpha=1.00)
-plt.show()
 ```
 
 ## An Error
