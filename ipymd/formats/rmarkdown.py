@@ -282,7 +282,7 @@ class RmarkdownWriter(object):
 
 
 class RmdWriter(BaseMarkdownWriter):
-    """Default .Rmd writer."""
+    """.Rmd writer"""
 
     def __init__(self, rmarkdown_writer):
         super(RmdWriter, self).__init__()

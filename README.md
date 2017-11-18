@@ -104,16 +104,6 @@ pip install git+https://github.com/eea/odfpy
 
 
 
-## Caveats
-
-**WARNING**: use this library at your own risks, backup your data, and version-control your notebooks and Markdown files!
-
-* Renaming doesn't work yet (issue #4)
-* New notebook doesn't work yet (issue #5)
-* Only nbformat v4 is supported currently (IPython 3.0)
-
-
-
 ## Formats
 ### IPython notebook (`.ipynb`)
 Jupyter's default notebook format. It stores cells as json-objects. 
