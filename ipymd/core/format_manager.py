@@ -361,4 +361,5 @@ def convert_rmarkdown(from_, to, contents):
         return reader.read(contents)
 
     else:
-        raise RuntimeError("Rmarkdown conversion is only possible between 'notebook' and 'rmarkdown' format. ")
+        raise RuntimeError("Rmarkdown conversion is only possible between"
+                           " 'notebook' and 'rmarkdown' format. ")

@@ -189,9 +189,11 @@ def _merge_consecutive_markdown_cells(cells):
                 tmp_cell = cell
             else:
                 if 'source' in cell:
-                    tmp_cell['source'] = tmp_cell.get('source', "") + "\n\n" + cell['source']
+                    tmp_cell['source'] = (tmp_cell.get('source', "") + "\n\n" +
+                                          cell['source'])
                 if 'metadata' in cell:
-                    tmp_cell['metadata'] = tmp_cell.get('metadata', {}).update(cell['metadata'])
+                    tmp_cell['metadata'] = (tmp_cell.get('metadata', {})
+                                            .update(cell['metadata']))
         else:
             done_merging()
             merged.append(cell)

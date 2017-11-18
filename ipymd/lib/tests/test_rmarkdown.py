@@ -1,7 +1,8 @@
 """Test rmarkdown helper functions. """
 
 
-from ipymd.lib.rmarkdown import _merge_consecutive_markdown_cells, _read_rmd_b64, _option_value_str, \
+from ipymd.lib.rmarkdown import _merge_consecutive_markdown_cells, \
+    _read_rmd_b64, _option_value_str, \
     _parse_option_value, _parse_chunk_meta
 from collections import OrderedDict
 
@@ -55,7 +56,8 @@ def test_read_rmd_base64():
 
 
 def test_parse_chunk_meta():
-    chunk_meta = """{r chunk_name, foo='bar', cat="gold", horse=9, bool_val=TRUE}"""
+    chunk_meta = \
+        """{r chunk_name, foo='bar', cat="gold", horse=9, bool_val=TRUE}"""
     lang, name, meta = _parse_chunk_meta(chunk_meta)
     assert lang == 'r'
     assert name == 'chunk_name'

@@ -253,7 +253,6 @@ class MarkdownWriter(BaseMarkdownWriter):
         self._output.write(self.meta(metadata) + wrapped)
 
 
-
 MARKDOWN_FORMAT = dict(
     reader=MarkdownReader,
     writer=MarkdownWriter,

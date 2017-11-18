@@ -60,7 +60,6 @@ def _assert_cell_outputs_equal(output_0, output_1, check_metadata=True):
             output_0['execution_count'] is None
 
 
-
 def _assert_cells_equal(cell_0, cell_1, check_metadata=True,
                         check_outputs=True):
     assert cell_0['cell_type'] == cell_1['cell_type']

@@ -139,7 +139,8 @@ class HtmlNbReader(object):
     Read R noteboook .html.nb files.
 
     See Also:
-        - https://github.com/rstudio/rmarkdown/blob/95b8b1fa64f78ca99f225a67fff9817103be568b/R/html_notebook.R
+        - https://github.com/rstudio/rmarkdown/blob/
+            95b8b1fa64f78ca99f225a67fff9817103be568b/R/html_notebook.R
         - http://rmarkdown.rstudio.com/r_notebook_format.html
 
     """
@@ -175,7 +176,8 @@ class HtmlNbReader(object):
 
     def _parse_html(self, html):
         """ get a list of rnb-text and rnb-chunks"""
-        for start_tag, contents, end_tag in self.def_text_or_chunk.findall(html):
+        for start_tag, contents, end_tag in (
+                self.def_text_or_chunk.findall(html)):
             assert start_tag == end_tag, \
                 "text and chunk blocks must not be nested."
             yield start_tag, contents.strip()
@@ -203,7 +205,8 @@ class HtmlNbReader(object):
         cell = HtmlNbChunkCell(self._count)
         self._count += 1
 
-        for start_tag, b64, contents, end_tag in self.def_chunk_element.findall(chunk_block):
+        for start_tag, b64, contents, end_tag in (
+                self.def_chunk_element.findall(chunk_block)):
             assert start_tag == end_tag, \
                 "different chunk elements must not be nested. "
             b64 = b64.strip()
