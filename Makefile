@@ -6,8 +6,11 @@ help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
+	@echo "clean-venv - remove Python virtual environment"
+	@echo "python - create Python virtual environment and install all required packages"
 	@echo "lint - check style with flake8"
 	@echo "test - run tests quickly with the default Python"
+	@echo "jupyter - run jupyter notebook in a virtual environment with ipymd"
 
 clean: clean-build clean-pyc clean-venv
 
@@ -26,7 +29,7 @@ clean-venv:
 	rm -rf venv/
 
 lint: | $(PYTHON)
-	$(VENV)/flake8 ipymd setup.py --exclude=ipymd/ext/six.py,ipymd/core/contents_manager.py --ignore=E226,E265,F401,F403,F811
+	$(VENV)/flake8 ipymd setup.py --exclude=ipymd/ext/six.py,ipymd/core/contents_manager.py,ipymd/formats/tests/test_rmarkdown.py --ignore=E226,E265,F401,F403,F811
 
 test: lint | $(PYTHON)
 	$(PYTHON) setup.py test
