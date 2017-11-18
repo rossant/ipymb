@@ -91,7 +91,8 @@ def test_decorator():
 
 
 def test_md_notebook_metadata():
-    """Test that reading and writing complex notebook metadata results in the identity. """
+    """Test that reading and writing complex notebook metadata
+    results in the identity. """
     mock_metadata = '\n'.join(('---',
                                'author: John Doe',
                                'date: 2017-05-07',
