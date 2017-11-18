@@ -1,151 +1,142 @@
 [![Build Status](https://travis-ci.org/rossant/ipymd.svg?branch=travis)](https://travis-ci.org/rossant/ipymd)
 [![Coverage Status](https://coveralls.io/repos/rossant/ipymd/badge.svg)](https://coveralls.io/r/rossant/ipymd)
 
-# Replace .ipynb with .md in the IPython Notebook
-** the goal of this for is to implement the [R Notebook](http://rmarkdown.rstudio.com/r_notebook_format.html) format as a file format for jupyter **
+# Store Jupyter notebooks in markdown format. 
+This package provides an alternative content manager for jupyter.
+It allows to store notebooks in text-based formats, replacing the native json-based `.ipynb`. 
 
-This format stores the output in a separate `.nb.html` file, while the code chunks and markdown cells go into a `.Rmd` file. 
-This has the advantage over pure markdown, that the output can be stored (including images) and the advantage over `.ipynb` that it works well with git and is editable in a text editor. 
-
-
----------
+This combines the advantages of a simple, text-based format (vi and git-friendly) with jupyter's powerful UI for interactively editing code and text. 
 
 
-The goal of ipymd is to replace `.ipynb` notebook files like:
+## Overview of formats
+Ipymd currently supports the following formats:
 
-```json
-{
- "cells": [
-  {
-   "cell_type": "markdown",
-   "source": [
-    "Here is some Python code:"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Hello world!\n"
-     ]
-    }
-   ],
-   "source": [
-    "print(\"Hello world!\")"
-   ]
-  }
-  ...
-  ]
-}
+| Format       | Extension          | vi | git | images |
+| ------------ | ------------------ | -- | --- | ------ |
+| [notebook](#ipython-notebook-ipynb) | `.ipynb`           |    |     | ✔      | 
+| [rmarkdown](#rmarkdown-rmd--rnotebook-nbhtml) | `.Rmd`, `.nb.html` | ✔  | ✔   | ✔      |
+| [markdown]()     | `.md`              | ✔  | (✔) |        |
+| [atlas](#oreilly-atlas-md) | `.md`              | ✔  | (✔) |        | 
+| [opendocument](#opendocument-odt) | `.odt`             |    |     |        |
+| [python](#python-py)       | `.py`              | ✔  | (✔) |        |
+
+✔ works; (✔) works with limitations
+
+
+## Usage
+Ipymd hooks into jupyter, enabling to open the files directly in jupyter notebook. 
+
+Alternatively, you can use ipymd to convert between the formats from command line: 
+
+```
+usage: ipymd [-h] --from FROM_ --to TO [--output OUTPUT]
+             [--extension EXTENSION] [--overwrite]
+             files_or_dirs [files_or_dirs ...]
+
+Convert files across formats supported by ipymd.
+
+positional arguments:
+  files_or_dirs         list of files or directories to convert
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --from FROM_          one of atlas, markdown, notebook, opendocument,
+                        python, rmarkdown
+  --to TO               one of atlas, markdown, notebook, opendocument,
+                        python, rmarkdown
+  --output OUTPUT       output folder
+  --extension EXTENSION
+                        output file extension
+  --overwrite           overwrite target file if it exists (false by default)
 ```
 
-with:
-
-    Here is some Python code:
-
-    ```python
-    >>> print("Hello world!")
-    Hello world!
-    ```
-
-The JSON `.ipynb` are removed from the equation, and the conversion happens on the fly. The IPython Notebook becomes an interactive Markdown text editor!
-
-A drawback is that you lose prompt numbers and images (for now).
-
-This is useful when you write technical documents, blog posts, books, etc.
-
-![image](https://cloud.githubusercontent.com/assets/1942359/5570181/f656a484-8f7d-11e4-8ec2-558d022b13d3.png)
 
 ## Installation
+There are two possibilities to use ipymd:
 
-1. Install ipymd:
-
-    To install the latest release version:
-
+1. **Within a virtual environment, for testing and developing**
     ```shell
-    pip install ipymd
+    git clone https://github.com/rossant/ipymd
+    make jupyter
     ```
+    will setup a virtual environment and run a `jupyter notebook` instance with ipymd activated.
 
-    Alternatively, to install the development version:
-
-    ```shell
-    pip install git+https://github.com/rossant/ipymd
-    ```
-
-2. **Optional:**
-    To interact with `.ipynb` files:
-
-    ```shell
-    pip install jupyter ipython
-    ```
-
-    To interact with `.odt` files:
-
-    ```shell
-    pip install git+https://github.com/eea/odfpy
-    ```
-
-3. Open your `jupyter_notebook_config.py`. Here's how to find it:
-
-
-    ```
-    jupyter notebook --generate-config  # generate a default config file
-    jupyter --config-dir  # find out the path to the config file
-    ```
-
-4. Add the following in `jupyter_notebook_config.py`:
-
+    You can choose the format by editing `.jupyter/jupyter_notebook_config.py`:
     ```python
-    c.NotebookApp.contents_manager_class = 'ipymd.IPymdContentsManager'
+    c.IPymdContentsManager.format = 'rmarkdown'  # choose the format here
     ```
 
-5. Now, you can open `.md` files in the Notebook.
 
-## Why?
+2. **Integrated into your local jupyter installation**
+    * Install ipymd
+        ```shell
+        pip install ipymd
+        ```
 
-### IPython Notebook
+    * Open your `jupyter_notebook_config.py`. Here's how to find it:
+        ```
+        jupyter notebook --generate-config  # generate a default config file
+        jupyter --config-dir  # find out the path to the config file
+        ```
 
-Pros:
+    * Add the following in `jupyter_notebook_config.py`:
+        ```python
+        c.NotebookApp.contents_manager_class = 'ipymd.IPymdContentsManager'
+        c.IPymdContentsManager.format = 'rmarkdown'  # choose the format here
+        ```
 
-* Excellent UI for executing code interactively *and* writing text
+    * (re)start jupyter
 
-Cons:
+**Optional:**
+To interact with `.odt` files:
 
-* `.ipynb` not git-friendly
-* Cannot easily edit in a text editor
-* Cannot easily edit on GitHub's web interface
+```shell
+pip install git+https://github.com/eea/odfpy
+```
 
+## Caveats
 
-### Markdown
+**WARNING**: use this library at your own risks, backup your data, and version-control your notebooks and Markdown files!
 
-Pros:
-
-* Simple ASCII/Unicode format to write code and text
-* Can easily edit in a text editor
-* Can easily edit on GitHub's web interface
-* Git-friendly
-
-Cons:
-
-* No UI to execute code interactively
-
-
-### ipymd
-
-All pros of IPython Notebook and Markdown, no cons!
+* Renaming doesn't work yet (issue #4)
+* New notebook doesn't work yet (issue #5)
+* Only nbformat v4 is supported currently (IPython 3.0)
 
 
-## How it works
 
-* Write in Markdown in `document.md`
-    * Either in a text editor (convenient when working on text)
-    * Or in the Notebook (convenient when writing code examples)
-* Markdown cells, code cells and (optionally) notebook metadata are saved in
-  the file
-* Collaborators can work on the Markdown document using GitHub's web interface.
+## Caveats
+
+**WARNING**: use this library at your own risks, backup your data, and version-control your notebooks and Markdown files!
+
+* Renaming doesn't work yet (issue #4)
+* New notebook doesn't work yet (issue #5)
+* Only nbformat v4 is supported currently (IPython 3.0)
+
+
+
+## Formats
+### IPython notebook (`.ipynb`)
+Jupyter's default notebook format. It stores cells as json-objects. 
+The main downsides of this format are
+* not git-friendly
+* cannot easily edit in a text editor
+* cannot easily edit on GitHub's web interface
+
+[Format documentation](http://nbformat.readthedocs.io/en/latest/)
+
+### RMarkdown (`.Rmd`) / RNotebook (`.nb.html`)
+RMarkdown is propagated by rstudio and widely adopted within the R community. 
+Unlike the name suggests, it can very well be used with python. 
+
+The clue about this format is, that it strictly separates source code from output. 
+This makes it the format of choice when working with version control. 
+
+While the source code is stored as markdown in a `.Rmd` file, the results go into a
+`.nb.html` file which can also be viewed in a browser. 
+
+[Format documentation](http://rmarkdown.rstudio.com/r_notebooks.html)
+
+### Markdown (`.md`)
 * By convention, a **notebook code cell** is equivalent to a **Markdown code block with explicit `python` syntax highlighting**:
 
   ```
@@ -202,26 +193,23 @@ All pros of IPython Notebook and Markdown, no cons!
     * Text output and standard output are combined into a single text output (stdout lines first, output lines last)
 
 
-## Caveats
 
-**WARNING**: use this library at your own risks, backup your data, and version-control your notebooks and Markdown files!
+### O'Reilly Atlas (`.md`)
+* `.md` with special HTML tags for code and mathematical equations
+[Format documentation](http://odewahn.github.io/publishing-workflows-for-jupyter/#1)  (
 
-* Renaming doesn't work yet (issue #4)
-* New notebook doesn't work yet (issue #5)
-* Only nbformat v4 is supported currently (IPython 3.0)
+### Python (`.py`)
+* code cells are delimited by double line breaks.
+* Markdown cells = Python comments. 
+* [TODO: this doesn't work well, see #28 and #31]
+
+### Opendocument (`.odt`).
+* You need to install the [development version of odfpy](https://github.com/eea/odfpy/).
 
 
-## Formats
 
+## Implementing your own format
 ipymd uses a modular architecture that lets you define new formats. The following formats are currently implemented, and can be selected by modifying `~/.ipython/profile_<whichever>/ipython_notebook_config.py`:
-
-* IPython notebook (`.ipynb`)
-* Markdown (`.md`)
-    * `c.IPymdContentsManager.format = 'markdown'`
-* [O'Reilly Atlas](http://odewahn.github.io/publishing-workflows-for-jupyter/#1)  (`.md` with special HTML tags for code and mathematical equations)
-    * `c.IPymdContentsManager.format = 'atlas'`
-* Python (`.py`): code cells are delimited by double line breaks. Markdown cells = Python comments. [TODO: this doesn't work well, see #28 and #31]
-* Opendocument (`.odt`). You need to install the [development version of odfpy](https://github.com/eea/odfpy/).
 
 You can convert from any supported format to any supported format. This works by converting to an intermediate format that is basically a list of notebook cells.
 
