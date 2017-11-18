@@ -515,3 +515,19 @@ def test_ex6_rmarkdown_rmarkdown():
 
 def test_ex6_notebook_notebook():
     _test_notebook_notebook('ex6')
+
+
+def test_ex7_reader():
+    _test_rmarkdown_reader('ex7')
+
+
+def test_ex7_writer():
+    _test_rmarkdown_writer('ex7')
+
+
+def test_ex7_rmarkdown_rmarkdown():
+    _test_rmarkdown_rmarkdown('ex7')
+
+
+def test_ex7_notebook_notebook():
+    _test_notebook_notebook('ex7')

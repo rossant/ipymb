@@ -403,12 +403,16 @@ class NbHtmlWriter(object):
         as base64 string.
         """
         output = _stream_output_to_result(output)
+
         assert output['output_type'] in ['execute_result',
                                          'display_data', 'error']
 
         if output['output_type'] == 'error':
             yield from self._create_output_tag_error(output)
         else:
+            if len(output.get('data', [])) == 0:
+                # ignore emtpy outputs
+                return
             # look for these mimetypes in the given order.
             # the first one matching will be visible in html.
             display_types = OrderedDict()
@@ -502,7 +506,7 @@ class NbHtmlWriter(object):
 
         """
         meta_b64 = "" if tag_meta is None or tag_meta == {} else _b64_encode(
-            json.dumps(tag_meta))
+            json.dumps(tag_meta, sort_keys=True))
         return "<!-- rnb-{tag}-begin {b64}-->\n" \
                "{contents}" \
                "<!-- rnb-{tag}-end -->".format(tag=tag_name, b64=meta_b64,
