@@ -17,6 +17,7 @@ dist/
 pytest.ini
 venv
 sandbox
+pandoc-*
 
 # internal script for development
 convert_testcases.sh

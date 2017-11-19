@@ -53,6 +53,7 @@ $(PIP): | venv
 venv/.installed: requirements-dev.txt | venv
 	$(PIP) install -Ur requirements-dev.txt
 	$(PIP) install -e .
+	$(PYTHON) -c 'import pypandoc; pypandoc.download_pandoc(version="1.19.1")'
 	echo "pip install successful" > $@
 
 $(PYTHON): | $(PIP) venv/.installed
