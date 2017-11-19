@@ -29,21 +29,12 @@ Ipymd hooks into jupyter, enabling to open the files directly in jupyter noteboo
 Alternatively, you can use ipymd to convert between the formats from command line: 
 
 ```
-usage: ipymd [-h] --from FROM_ --to TO [--output OUTPUT]
-             [--extension EXTENSION] [--overwrite]
-             files_or_dirs [files_or_dirs ...]
+ipymd my_notebook.ipynb --from notebook --to markdown
+```
 
-Convert files across formats supported by ipymd.
-
-positional arguments:
-  files_or_dirs         list of files or directories to convert
-
-optional arguments:
+Additional options:
+```
   -h, --help            show this help message and exit
-  --from FROM_          one of atlas, markdown, notebook, opendocument,
-                        python, rmarkdown
-  --to TO               one of atlas, markdown, notebook, opendocument,
-                        python, rmarkdown
   --output OUTPUT       output folder
   --extension EXTENSION
                         output file extension
@@ -125,6 +116,66 @@ While the source code is stored as markdown in a `.Rmd` file, the results go int
 `.nb.html` file which can also be viewed in a browser. 
 
 [Format documentation](http://rmarkdown.rstudio.com/r_notebooks.html)
+
+
+#### Known issues
+See [grst/ipymd/issues](https://github.com/grst/ipymd/issues) for issues related to rmarkdown. Major issues:
+* HTML formatting can be improved
+* Some output is not compatible with rstudio
+
+#### Implementation of `.Rmd` format
+* markdown cells are saved as plain markdown
+* code cells are saved as code chunks, separated by a newline
+  ~~~
+  ```{python, some="meta", data=True}
+  print("Hello World!")
+  ```
+  ~~~
+  Note the curly braced `{}` which distinguish an executed code chunk from 
+  a code chunk within markdown. 
+* metadata is saved as chunk options.
+    * Both python and R literals are supported (`NULL`, `None`, `TRUE`, `True`, `FALSE`, `False`),
+    but always saved as R literals to maintain compatibility with rstudio. 
+    * Both single and double quoted strings are supported. 
+    * We try to parse unquoted options as literal, then as integer, then as float. If all three fail a `TypeError` is raised. 
+    
+#### Implementation of `nb.html` format. 
+* This format stores the outputs of the notebook in a way that
+  * the outputs can be read from jupyter
+  * the entire notebook can be viewed from a browser
+* a html templated is used, which is filled using `jinja2`. 
+* markdown cells are saved within `<!--rnb-text-begin -->...<!--rnb-text-end -->` tags
+* code cells are saved within `chunk` tags:
+  ```
+  <!--rnb-chunk-begin -->
+    <!--rnb-source-begin {base64}-->
+      <pre><code>...</pre/code>
+    <!--rnb-source-end -->
+    <!--rnb-output-begin {base64}-->
+      ...
+    <!--rnb-output-end -->
+    <!--rnb-plot-begin {base64}-->
+      <img src=... />
+    <!--rnb-plot-end -->
+  <!--rnb-chunk-end -->  
+  ```
+* tags cannot be nested
+* a `chunk` may hold an arbitrary number of `outputs`
+* tags hold data as base64 encoded json dictionaries as follows:
+  * rnb-source-begin: 
+    ~~~
+    {'data': '```python\n chunk as markdown```'}
+    ~~~
+  * rnb-output-begin/rnb-plot-begin
+    ~~~
+    {'data': '<plain text representation of output>',   # fallback for rstudio
+     'ipymd.data': {'text/plain': ...,                  # output['data'] from jupyter nbformat
+                    'image/png': ...,
+                    ... },
+     'ipymd.metadata': {},                              # output['metadata'] from jupyter nbformat
+     'ipymd.output_type': 'display_data'}               # output['output_type'] from jupyter nbformat
+    ~~~
+
 
 ### Markdown (`.md`)
 * By convention, a **notebook code cell** is equivalent to a **Markdown code block with explicit `python` syntax highlighting**:
