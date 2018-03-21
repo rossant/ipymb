@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 from ...core.format_manager import format_manager, convert
-from ..notebook import _compare_notebooks
+from ...lib.notebook import _assert_notebooks_equal
 from ...utils.utils import _diff, _show_outputs
 from ._utils import (_test_reader, _test_writer,
                      _exec_test_file, _read_test_file)
@@ -23,21 +23,24 @@ def _test_notebook_reader(basename):
     assert converted == expected
 
 
-def _test_notebook_writer(basename):
+def _test_notebook_writer(basename, check_outputs=True):
     """Check that (test nb) and (test cells ==> nb) are the same.
     """
     converted, expected = _test_writer(basename, 'notebook')
-    assert _compare_notebooks(converted, expected)
+
+    _assert_notebooks_equal(converted, expected, check_notebook_metadata=False,
+                            check_cell_outputs=check_outputs)
 
 
-def _test_notebook_notebook(basename):
+def _test_notebook_notebook(basename, check_outputs=True):
     """Check that the double conversion is the identity."""
 
     contents = _read_test_file(basename, 'notebook')
     cells = convert(contents, from_='notebook')
     converted = convert(cells, to='notebook')
 
-    assert _compare_notebooks(contents, converted)
+    _assert_notebooks_equal(contents, converted, check_notebook_metadata=False,
+                            check_cell_outputs=check_outputs)
 
 
 def test_notebook_reader():
@@ -48,11 +51,13 @@ def test_notebook_reader():
 
 def test_notebook_writer():
     _test_notebook_writer('ex1')
-    _test_notebook_writer('ex2')
+    # Ex2 contains an image, which is not supported by ipymd internal format
+    _test_notebook_writer('ex2', check_outputs=False)
     _test_notebook_writer('ex3')
 
 
 def test_notebook_notebook():
     _test_notebook_notebook('ex1')
-    _test_notebook_notebook('ex2')
+    # Ex2 contains an image, which is not supported by ipymd internal format
+    _test_notebook_notebook('ex2', check_outputs=False)
     _test_notebook_notebook('ex3')

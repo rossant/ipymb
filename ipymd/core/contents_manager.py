@@ -9,6 +9,8 @@
 import io
 import os
 import os.path as op
+import notebook.transutils
+
 
 from tornado import web
 

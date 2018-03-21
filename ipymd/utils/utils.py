@@ -98,11 +98,22 @@ def _diff(text_0, text_1):
     return _diff_removed_lines(diff)
 
 
+def _full_diff(text_0, text_1):
+    """Return a full diff between two strings"""
+    diff = difflib.ndiff(text_0.splitlines(keepends=True),
+                         text_1.splitlines(keepends=True))
+    return "".join(diff)
+
+
 def _show_outputs(*outputs):
     for output in outputs:
         print()
         print("-" * 30)
         pprint(output)
+
+
+def _get_cell_types(cells):
+    return [cell['cell_type'] for cell in cells]
 
 
 #------------------------------------------------------------------------------

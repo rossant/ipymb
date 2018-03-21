@@ -10,6 +10,7 @@ from ...core.format_manager import format_manager, convert
 from ...utils.utils import _diff, _show_outputs
 from ._utils import (_test_reader, _test_writer,
                      _exec_test_file, _read_test_file)
+from ..markdown import MarkdownReader, MarkdownWriter
 
 
 #------------------------------------------------------------------------------
@@ -87,3 +88,32 @@ def test_decorator():
 
     markdown_bis = convert(cells, to='markdown')
     assert _diff(markdown, markdown_bis.replace('python', '')) == ''
+
+
+def test_md_notebook_metadata():
+    """Test that reading and writing complex notebook metadata
+    results in the identity. """
+    mock_metadata = '\n'.join(('---',
+                               'author: John Doe',
+                               'date: 2017-05-07',
+                               'output:',
+                               '  html_document:',
+                               '  - --title-prefix',
+                               '  - Foo',
+                               '  - --id-prefix',
+                               '  - Bar',
+                               '  toc: true',
+                               '  toc_float:',
+                               '    collapsed: false',
+                               '    smooth_scroll: false',
+                               'title: Habits',
+                               '---',
+                               ''))
+
+    mdreader = MarkdownReader()
+    cells = mdreader.read(mock_metadata)
+
+    mdwriter = MarkdownWriter()
+    mdwriter.write_notebook_metadata(cells[0]['metadata'])
+
+    assert mdwriter.contents == mock_metadata

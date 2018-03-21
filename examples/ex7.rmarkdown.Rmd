@@ -1,0 +1,39 @@
+---
+kernelspec:
+  display_name: R
+  language: R
+  name: ir
+language_info:
+  codemirror_mode: r
+  file_extension: .r
+  mimetype: text/x-r-source
+  name: R
+  pygments_lexer: r
+  version: 3.4.2
+output: html_notebook
+---
+
+## R notebook with R kernel
+
+Some literal R code which should not be evaluated
+```r
+stop("not evaluated")
+```
+
+```{R, trusted=TRUE}
+library(tidyverse)
+```
+
+```{R, trusted=TRUE}
+data = 1:20 * 2
+data
+```
+
+```{R, trusted=TRUE}
+df = tibble(x=1:20, data=data)
+df
+```
+
+```{R, trusted=TRUE}
+ggplot(df, aes(x=x, y=data)) + geom_bar(stat='identity')
+```

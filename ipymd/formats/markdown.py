@@ -116,7 +116,8 @@ class BaseMarkdownWriter(object):
     def _new_paragraph(self):
         self._output.write('\n\n')
 
-    def meta(self, source, is_notebook=False):
+    @staticmethod
+    def meta(source, is_notebook=False):
         if source is None:
             return ''
 
@@ -138,6 +139,11 @@ class BaseMarkdownWriter(object):
             meta = meta[:-5] + '---\n\n'
 
         return meta
+
+    @staticmethod
+    def format_code(code, lang="python"):
+        return '```{lang}\n{code}\n```'.format(lang=lang,
+                                               code=code.rstrip())
 
     def append_markdown(self, source, metadata):
         source = _ensure_string(source)
@@ -243,7 +249,7 @@ class MarkdownWriter(BaseMarkdownWriter):
 
     def append_code(self, input, output=None, metadata=None):
         code = self._prompt.from_cell(input, output)
-        wrapped = '```python\n{code}\n```'.format(code=code.rstrip())
+        wrapped = self.format_code(code)
         self._output.write(self.meta(metadata) + wrapped)
 
 
